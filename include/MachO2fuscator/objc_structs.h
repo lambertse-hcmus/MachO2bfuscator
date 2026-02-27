@@ -197,6 +197,66 @@ static constexpr uint32_t METHOD_LIST_IS_UNIQUED_STUBS = 0x80000000u;
 static constexpr uint32_t METHOD_LIST_FLAG_MASK = 0xFFFF0003u;
 static constexpr uint32_t METHOD_LIST_ENTSIZE_MASK = ~METHOD_LIST_FLAG_MASK;
 
+// ── Chained fixup pointer formats ────────────────────────────────
+// Modern Xcode 13+ binaries use LC_DYLD_CHAINED_FIXUPS instead of
+// LC_DYLD_INFO_ONLY. Pointers stored in ObjC metadata are encoded
+// as rebase targets rather than plain VM addresses.
+//
+// There are two common encodings on arm64:
+//
+// 1. DYLD_CHAINED_PTR_ARM64E (arm64e with PAC):
+//    Bits [63:62] = 0b11 → authenticated pointer
+//    Bits [63:62] = 0b01 → rebase
+//    Real target = bits[31:0] + slide
+//
+// 2. DYLD_CHAINED_PTR_64 (arm64 non-PAC):
+//    Bit  [63]    = 0 → plain rebase
+//    Bits [61:32] = high8 (shifted target high bits)
+//    Bits [31:0]  = target low bits
+//    Real target = (high8 << 56) | target + slide
+//
+// For our purposes (static binary analysis with no ASLR slide),
+// we use the preferred image load address from the binary itself.
+//
+// Reference:
+//   https://github.com/apple-oss-distributions/dyld/blob/main/include/mach-o/fixup-chains.h
+
+// Fixup chain pointer format identifiers (from fixup-chains.h)
+static constexpr uint16_t DYLD_CHAINED_PTR_ARM64E = 1;
+static constexpr uint16_t DYLD_CHAINED_PTR_64 = 2;
+static constexpr uint16_t DYLD_CHAINED_PTR_64_OFFSET = 6;
+static constexpr uint16_t DYLD_CHAINED_PTR_ARM64E_USERLAND24 = 12;
+
+// Top-level header at dataoff of LC_DYLD_CHAINED_FIXUPS
+struct dyld_chained_fixups_header {
+  uint32_t fixups_version;  // = 0
+  uint32_t starts_offset;   // offset of dyld_chained_starts_in_image
+                            // relative to THIS header
+  uint32_t imports_offset;
+  uint32_t symbols_offset;
+  uint32_t imports_count;
+  uint32_t imports_format;
+  uint32_t symbols_format;
+};
+
+// Follows immediately after dyld_chained_fixups_header at starts_offset
+struct dyld_chained_starts_in_image {
+  uint32_t seg_count;
+  uint32_t seg_info_offset[1];  // [seg_count] offsets, each relative
+                                // to THIS struct's address
+                                // 0 means no fixups in that segment
+};
+
+// One per segment that has fixups
+struct dyld_chained_starts_in_segment {
+  uint32_t size;            // size of this struct
+  uint16_t page_size;       // 0x1000 or 0x4000
+  uint16_t pointer_format;  // DYLD_CHAINED_PTR_* ← THIS IS WHAT WE NEED
+  uint64_t segment_offset;  // offset in memory to start of segment
+  uint32_t max_valid_pointer;
+  uint16_t page_count;
+  uint16_t page_start[1];  // [page_count]
+};
 }  // namespace ObjC
 
 #pragma pack(pop)

@@ -16,8 +16,15 @@
 #include <mach-o/loader.h>  // mach_header, mach_header_64, load_command, segment_command_64, …
 #include <mach-o/swap.h>  // OSSwapInt32 etc.
 
+//
+#include "MachO2fuscator/objc_structs.h"
+
 #ifndef LC_DYLD_EXPORTS_TRIE
 #define LC_DYLD_EXPORTS_TRIE 0x80000033u
+#endif
+
+#ifndef LC_DYLD_CHAINED_FIXUPS
+#define LC_DYLD_CHAINED_FIXUPS 0x80000034u
 #endif
 
 // ═══════════════════════════════════════════════════════════════
@@ -176,8 +183,8 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
       case LC_DYLD_EXPORTS_TRIE: {
         const auto* cmd =
             getStructAt<linkedit_data_command>(base, cursor, sliceSize);
-        // Store in dyldInfo.exportRange; bind/weakBind/lazyBind remain zero
-        MachDyldInfo info{};
+
+        MachDyldInfo info = slice.dyldInfo.value_or(MachDyldInfo{});
         info.exportRange = {cmd->dataoff, cmd->datasize};
         slice.dyldInfo = info;
         break;
@@ -205,6 +212,70 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
         break;
       }
 
+      case LC_DYLD_CHAINED_FIXUPS: {
+        const auto* cmd =
+            getStructAt<linkedit_data_command>(base, cursor, sliceSize);
+
+        MachDyldInfo info = slice.dyldInfo.value_or(MachDyldInfo{});
+        info.chainedFixups = {cmd->dataoff, cmd->datasize};
+        info.hasChainedFixups = true;
+
+        // ── Parse pointer format from chained fixup data ──────────
+        // Layout (all offsets relative to the start of the fixup data
+        // i.e. base + cmd->dataoff):
+        //
+        //  [dyld_chained_fixups_header]
+        //      .starts_offset → offset to dyld_chained_starts_in_image
+        //                        (relative to header start)
+        //  [dyld_chained_starts_in_image]
+        //      .seg_count
+        //      .seg_info_offset[i] → offset to dyld_chained_starts_in_segment
+        //                            (relative to starts_in_image start)
+        //  [dyld_chained_starts_in_segment]
+        //      .pointer_format  ← what we want
+
+        uint64_t fixupBase = cmd->dataoff;  // file offset of fixup data start
+
+        if (cmd->datasize >= sizeof(ObjC::dyld_chained_fixups_header)) {
+          const auto* hdr = getStructAt<ObjC::dyld_chained_fixups_header>(
+              base, fixupBase, sliceSize);
+
+          // starts_offset is relative to fixupBase
+          uint64_t startsOff = fixupBase + hdr->starts_offset;
+
+          if (startsOff + sizeof(ObjC::dyld_chained_starts_in_image) <=
+              sliceSize) {
+            const auto* starts =
+                getStructAt<ObjC::dyld_chained_starts_in_image>(base, startsOff,
+                                                                sliceSize);
+
+            // Walk each segment entry looking for a non-zero pointer_format
+            for (uint32_t s = 0; s < starts->seg_count; ++s) {
+              uint32_t segInfoOff = starts->seg_info_offset[s];
+              if (segInfoOff == 0) continue;  // no fixups in this segment
+
+              // seg_info_offset[i] is relative to startsOff
+              uint64_t segStartsOff = startsOff + segInfoOff;
+
+              if (segStartsOff + sizeof(ObjC::dyld_chained_starts_in_segment) >
+                  sliceSize)
+                continue;
+
+              const auto* segStarts =
+                  getStructAt<ObjC::dyld_chained_starts_in_segment>(
+                      base, segStartsOff, sliceSize);
+
+              if (segStarts->pointer_format != 0) {
+                info.pointerFormat = segStarts->pointer_format;
+                break;  // all segments use the same format
+              }
+            }
+          }
+        }
+
+        slice.dyldInfo = info;
+        break;
+      }
       default:
         // Ignore unrecognised load commands — same as Swift's 'default: break'
         break;

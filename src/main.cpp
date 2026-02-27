@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "MachO2fuscator/mach_reader.h"
+#include "MachO2fuscator/objc_extractor.h"
 
 static void printSlice(const MachOSlice& slice, size_t index) {
   std::cout << "\n══ Slice #" << index << " ("
@@ -84,27 +85,84 @@ static void printSlice(const MachOSlice& slice, size_t index) {
   }
 }
 
+static void printMetadata(const MachOSlice& slice, size_t sliceIdx) {
+  std::cout << "\n── ObjC Metadata (Slice #" << sliceIdx << ") ──\n";
+
+  ObjcMetadata meta = ObjcExtractor::extractMetadata(slice);
+
+  // ── Classes ───────────────────────────────────────────────────
+  std::cout << "\nClasses (" << meta.classes.size() << "):\n";
+  for (const auto& cls : meta.classes) {
+    std::cout << "  class " << cls.name.value << "  [fileOff=0x" << std::hex
+              << cls.name.fileOffset << ", len=" << std::dec << cls.name.length
+              << "]\n";
+    for (const auto& m : cls.methods) {
+      std::cout << "    -" << m.name.value << "  " << m.methType.value << "\n";
+    }
+    for (const auto& iv : cls.ivars) {
+      std::cout << "    ivar " << iv.name.value << "  " << iv.type.value
+                << "\n";
+    }
+    for (const auto& p : cls.properties) {
+      std::cout << "    prop " << p.name.value << "  " << p.attributes.value
+                << "\n";
+    }
+  }
+
+  // ── Categories ────────────────────────────────────────────────
+  std::cout << "\nCategories (" << meta.categories.size() << "):\n";
+  for (const auto& cat : meta.categories) {
+    std::string clsName = cat.cls ? cat.cls->name.value : "(external)";
+    std::cout << "  " << clsName << "+" << cat.name.value << "\n";
+    for (const auto& m : cat.methods) {
+      std::cout << "    -" << m.name.value << "  " << m.methType.value << "\n";
+    }
+  }
+
+  // ── Protocols ─────────────────────────────────────────────────
+  std::cout << "\nProtocols (" << meta.protocols.size() << "):\n";
+  for (const auto& proto : meta.protocols) {
+    std::cout << "  @protocol " << proto.name.value << "\n";
+    for (const auto& m : proto.methods) {
+      std::cout << "    -" << m.name.value << "\n";
+    }
+  }
+
+  // ── Selectors ─────────────────────────────────────────────────
+  auto selectors = ObjcExtractor::extractSelectors(slice);
+  std::cout << "\nSelectors (" << selectors.size() << "):\n";
+  for (const auto& sel : selectors) {
+    std::cout << "  @selector(" << sel.value << ")"
+              << "  [fileOff=0x" << std::hex << sel.fileOffset << "]\n";
+  }
+  std::cout << std::dec;
+
+  // ── Obfuscatable class names ───────────────────────────────────
+  auto classNames = ObjcExtractor::collectClassNames(slice, meta);
+  std::cout << "\nObfuscatable class names (" << classNames.size() << "):\n";
+  for (const auto& cn : classNames) {
+    std::cout << "  " << cn.value << "  [fileOff=0x" << std::hex
+              << cn.fileOffset << ", len=" << std::dec << cn.length << "]\n";
+  }
+}
+
 int main(int argc, char* argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: class_obfuscator <path-to-macho-binary>\n";
     return 1;
   }
 
-  const std::string path = argv[1];
-  std::cout << "Loading: " << path << "\n";
-
   try {
-    MachOImage image = loadMachOImage(path);
+    MachOImage image = loadMachOImage(argv[1]);
     std::cout << "Slices found: " << image.slices.size() << "\n";
 
     for (size_t i = 0; i < image.slices.size(); ++i) {
       printSlice(image.slices[i], i);
+      printMetadata(image.slices[i], i);
     }
-
-  } catch (const MachLoadError& e) {
+  } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << "\n";
     return 1;
   }
-
   return 0;
 }

@@ -171,11 +171,10 @@ TEST(test_named_section_accessors) {
   ASSERT_EQ(slice.objcClasslistSection()->fileOffset, 0x500u);
 }
 
-// ── Test: loading /usr/lib/libSystem.B.dylib (always present on macOS) ───
 // This is an integration test against a real system binary.
 TEST(test_load_real_binary) {
-  // /usr/lib/libSystem.B.dylib is present on every macOS install
-  const char* testBin = "/usr/lib/libSystem.B.dylib";
+  std::string testBin =
+      "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/testckey_objc";
   MachOImage image = loadMachOImage(testBin);
 
   // Should have at least one slice

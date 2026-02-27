@@ -40,18 +40,23 @@ struct MachSymtab {
   FileRange strTable;   // file range of the string table
 };
 
-// ── DyldInfo ─────────────────────────────────────────────────────
+// ── CPU identifier ───────────────────────────────────────────────
+struct MachCpu {
+  int32_t type = 0;
+  int32_t subtype = 0;
+};
+
+// ── DyldInfo — extended for chained fixups ───────────────────────
 struct MachDyldInfo {
   FileRange bind;
   FileRange weakBind;
   FileRange lazyBind;
   FileRange exportRange;
-};
 
-// ── CPU identifier ───────────────────────────────────────────────
-struct MachCpu {
-  int32_t type = 0;
-  int32_t subtype = 0;
+  // LC_DYLD_CHAINED_FIXUPS (Xcode 13+)
+  FileRange chainedFixups;     // raw chained fixup data range
+  uint16_t pointerFormat = 0;  // DYLD_CHAINED_PTR_* value, 0 = unknown
+  bool hasChainedFixups = false;
 };
 
 // ── A single Mach-O slice ────────────────────────────────────────
@@ -77,8 +82,6 @@ struct MachOSlice {
   std::vector<std::string> rpaths;  // LC_RPATH values
 
   // ── Convenience section lookup ──────────────────────────────
-  // Mirrors Swift: func section(_ sectionName:, segment segmentName:) ->
-  // Section?
   const MachSection* findSection(const std::string& segName,
                                  const std::string& secName) const;
   const MachSection* findSectionInAnySegment(
@@ -135,5 +138,4 @@ struct MachOImage {
 
 // Load a Mach-O or fat binary from disk.
 // Throws MachLoadError on failure.
-// Mirrors Swift: Image.load(url:)
 MachOImage loadMachOImage(const std::string& path);

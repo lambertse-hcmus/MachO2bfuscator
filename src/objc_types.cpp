@@ -1,4 +1,4 @@
-#include "objc_types.h"
+#include "MachO2fuscator/objc_types.h"
 
 #include <sstream>
 #include <stdexcept>
