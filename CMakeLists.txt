@@ -20,6 +20,7 @@ add_library(${PROJECT_NAME_LIB}
     src/mach_reader.cpp
     src/objc_types.cpp
     src/objc_extractor.cpp
+    src/symbol_sets.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)
@@ -41,4 +42,8 @@ add_executable(test_objc_extractor
     tests/test_objc_extractor.cpp
 )
 target_link_libraries(test_objc_extractor PRIVATE ${PROJECT_NAME_LIB})
-add_test(NAME MachReaderTests COMMAND test_mach_reader)
+
+add_executable(test_symbol_sets
+    tests/test_symbol_sets.cpp
+)
+target_link_libraries(test_symbol_sets PRIVATE ${PROJECT_NAME_LIB})
