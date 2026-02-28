@@ -538,10 +538,11 @@ MachOImage loadMachOImage(const std::string& path) {
   uint64_t fileSize = static_cast<uint64_t>(st.st_size);
 
   // ── mmap the whole file (read-write, shared) ──────────────────
-  // MAP_SHARED means our in-place edits (Phase 6) will be written
-  // back to the file when we msync + munmap.
+  // MAP_PRIVATE to not touch the original file, infuture if want in-place edits
+  // using MAP_SHARED means our in-place edits (Phase 6) will be written back to
+  // the file when we msync + munmap.
   void* mapped = mmap(nullptr, static_cast<size_t>(fileSize),
-                      PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                      PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   close(fd);  // fd no longer needed after mmap
 
   if (mapped == MAP_FAILED) {

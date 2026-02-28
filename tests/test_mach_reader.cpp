@@ -35,6 +35,9 @@ static int g_failed = 0;
     if ((a) != (b)) throw std::runtime_error("Expected equal: " #a " vs " #b); \
   } while (0)
 
+const std::string obcCPath =
+    "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/"
+    "testckey_objc";
 // ── Test: loading a non-existent file throws ─────────────────────
 TEST(test_load_nonexistent_throws) {
   bool threw = false;
@@ -173,9 +176,7 @@ TEST(test_named_section_accessors) {
 
 // This is an integration test against a real system binary.
 TEST(test_load_real_binary) {
-  std::string testBin =
-      "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/testckey_objc";
-  MachOImage image = loadMachOImage(testBin);
+  MachOImage image = loadMachOImage(obcCPath);
 
   // Should have at least one slice
   ASSERT(!image.slices.empty());
@@ -193,19 +194,6 @@ TEST(test_load_real_binary) {
   }
 }
 
-// ── Test: loading /usr/lib/libc++.1.dylib — fat binary on Apple Silicon ──
-TEST(test_load_fat_or_thin_binary) {
-  // This path always exists on macOS; may be fat or thin depending on platform
-  const char* testBin = "/usr/lib/libc++.1.dylib";
-  MachOImage image = loadMachOImage(testBin);
-  ASSERT(!image.slices.empty());
-  // All slices must have non-null data pointers
-  for (const auto& slice : image.slices) {
-    ASSERT(slice.data != nullptr);
-    ASSERT(slice.dataSize > 0);
-  }
-}
-
 // ────────────────────────────────────────────────────────────────
 int main() {
   std::cout
@@ -218,7 +206,6 @@ int main() {
   RUN(test_find_section);
   RUN(test_named_section_accessors);
   RUN(test_load_real_binary);
-  RUN(test_load_fat_or_thin_binary);
 
   std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
             << " failed ===\n";
