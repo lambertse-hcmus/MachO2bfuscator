@@ -21,6 +21,7 @@ add_library(${PROJECT_NAME_LIB}
     src/objc_types.cpp
     src/objc_extractor.cpp
     src/symbol_sets.cpp
+    src/mangler.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)
@@ -47,3 +48,8 @@ add_executable(test_symbol_sets
     tests/test_symbol_sets.cpp
 )
 target_link_libraries(test_symbol_sets PRIVATE ${PROJECT_NAME_LIB})
+
+add_executable(test_mangler
+    tests/test_mangler.cpp
+)
+target_link_libraries(test_mangler PRIVATE ${PROJECT_NAME_LIB})
