@@ -23,6 +23,7 @@ add_library(${PROJECT_NAME_LIB}
     src/symbol_sets.cpp
     src/mangler.cpp
     src/binary_patcher.cpp
+    src/obfuscator.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)
@@ -59,3 +60,8 @@ add_executable(test_binary_patcher
     tests/test_binary_patcher.cpp
 )
 target_link_libraries(test_binary_patcher PRIVATE ${PROJECT_NAME_LIB})
+
+add_executable(test_obfuscator
+    tests/test_obfuscator.cpp
+)
+target_link_libraries(test_obfuscator PRIVATE ${PROJECT_NAME_LIB})
