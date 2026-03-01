@@ -105,3 +105,54 @@ Phase 4+5: SymbolsCollector → ManglingMap   (once, shared across all images)
               write → dst
 
 ```
+
+# Remaining Phases
+## Phase 8 — CLI Entry Point (src/main.cpp)
+
+Parse command-line arguments and build an ObfuscatorConfig, then call ObfuscatorPipeline::run(). 
+
+```
+argv  →  ObfuscatorConfig  →  ObfuscatorPipeline::run()  →  exit code
+
+```
+Key flags to support:
+Flag	Maps to
+-m caesar / -m random	config.mangler
+--erase-methtype	config.eraseMethType
+--erase-symtab / --preserve-symtab	config.eraseSymtab
+--dry-run	config.dryRun
+--blacklist-selector	config.manualSelectorBlacklist
+--blacklist-class	config.manualClassBlacklist
+--dependency	config.dependencyPaths
+-v / --verbose	config.verbose
+positional args	config.images (src=dst for in-place)
+## Phase 9 — End-to-End Validation
+
+A final integration test that runs the full CLI on a real binary, re-signs it with codesign, installs it on a simulator or device, and verifies it launches without crashing.
+```
+original binary
+      │
+      ▼
+class_obfuscator -m caesar --erase-methtype binary -o binary.obf
+      │
+      ▼
+codesign --force --sign - binary.obf
+      │
+      ▼
+xcrun simctl install + launch → must not crash
+```
+
+# Full Picture
+
+```
+Phase 1   loadMachOImage()          disk → memory
+Phase 2   objc_structs.h            struct definitions
+Phase 3   ObjcExtractor             memory → ObjC metadata
+Phase 4   SymbolsCollector          metadata → whitelist/blacklist
+Phase 5   IMangler                  whitelist → ManglingMap
+Phase 6   BinaryPatcher             ManglingMap → patched binary on disk
+Phase 7   ObfuscatorPipeline        orchestrates 1–6
+Phase 8   CLI (main.cpp)            argv → config → Phase 7    ← next
+Phase 9   End-to-end validation     patched binary runs on device
+```
+
