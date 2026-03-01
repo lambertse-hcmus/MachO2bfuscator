@@ -1,2 +1,1 @@
-# MachO2fuscation
-MachO Obfuscation 
+# MachO2bfuscator
