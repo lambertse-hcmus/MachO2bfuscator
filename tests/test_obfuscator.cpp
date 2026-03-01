@@ -1,39 +1,21 @@
+#include <gtest/gtest.h>
+
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <stdexcept>
 #include <vector>
 
 #include "MachO2bfuscator/mach_reader.h"
 #include "MachO2bfuscator/obfuscator.h"
 
-static int g_passed = 0, g_failed = 0;
-#define RUN(name)                                \
-  do {                                           \
-    std::cout << "  running " #name " ... ";     \
-    try {                                        \
-      name();                                    \
-      std::cout << "PASS\n";                     \
-      ++g_passed;                                \
-    } catch (const std::exception& e) {          \
-      std::cout << "FAIL: " << e.what() << "\n"; \
-      ++g_failed;                                \
-    }                                            \
-  } while (0)
-#define ASSERT(c)                                                    \
-  do {                                                               \
-    if (!(c))                                                        \
-      throw std::runtime_error("Assertion failed: " #c " at line " + \
-                               std::to_string(__LINE__));            \
-  } while (0)
-
-const std::string objCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
-    "testckey_objc";
+#ifdef TEST_OBJC_ABSOLUTE_PATH
+static const std::string kBinaryPath = "assets/testckey_objc";
+#else
+#warning \
+    "TEST_OBJC_ABSOLUTE_PATH is not defined. Some tests will be skipped that require a real binary."
+static const std::string kBinaryPath = "";
+#endif
 namespace fs = std::filesystem;
-
-// ── Helpers ───────────────────────────────────────────────────────
 
 static std::vector<uint8_t> readFile(const std::string& path) {
   std::ifstream f(path, std::ios::binary | std::ios::ate);
@@ -45,270 +27,307 @@ static std::vector<uint8_t> readFile(const std::string& path) {
   return buf;
 }
 
-// ── Unit tests (no binary needed) ────────────────────────────────
+// ── Helpers: walk a NUL-separated string section ─────────────────────
+// Calls cb(std::string) for every non-empty NUL-terminated string in [sec].
+static void forEachString(const MachOSlice& slice, const MachSection& sec,
+                          const std::function<void(const std::string&)>& cb) {
+  uint64_t cursor = sec.fileOffset;
+  uint64_t end = sec.fileOffset + sec.size;
+  while (cursor < end) {
+    const char* ptr = reinterpret_cast<const char*>(slice.data + cursor);
+    size_t len = strnlen(ptr, static_cast<size_t>(end - cursor));
+    if (len > 0) cb(std::string(ptr, len));
+    cursor += len + 1;
+  }
+}
 
-void test_empty_config_returns_zero_stats() {
-  // No images → nothing processed, no crash
+// ════════════════════════════════════════════════════════════════════
+//  Unit tests — no binary required
+// ════════════════════════════════════════════════════════════════════
+
+TEST(ObfuscatorPipeline, EmptyConfigReturnsZeroStats) {
   ObfuscatorConfig cfg;
   cfg.verbose = false;
+  ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
-  ObfuscatorPipeline pipeline(cfg);
-  ObfuscatorStats stats = pipeline.run();
-
-  ASSERT(stats.imagesProcessed == 0);
-  ASSERT(stats.selectorPatches == 0);
-  ASSERT(stats.classPatches == 0);
+  EXPECT_EQ(stats.imagesProcessed, 0u);
+  EXPECT_EQ(stats.selectorPatches, 0u);
+  EXPECT_EQ(stats.classPatches, 0u);
 }
 
-void test_default_mangler_is_set() {
-  // If no mangler is provided, CaesarMangler(13) is used by default
+TEST(ObfuscatorPipeline, DefaultManglerIsSet) {
   ObfuscatorConfig cfg;
-  // mangler is null — pipeline must set a default
-  ASSERT(cfg.mangler == nullptr);
+  EXPECT_EQ(cfg.mangler, nullptr);
 
-  ObfuscatorPipeline pipeline(cfg);
-  // After construction the pipeline must have a mangler
-  // We verify indirectly: run() must not throw even with no images
-  ObfuscatorStats stats = pipeline.run();
-  ASSERT(stats.imagesProcessed == 0);  // no images, but no crash
+  ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
+  EXPECT_EQ(stats.imagesProcessed, 0u);
 }
 
-void test_dry_run_does_not_write_file() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
+// ════════════════════════════════════════════════════════════════════
+//  Integration tests — fixture cleans up temp files
+// ════════════════════════════════════════════════════════════════════
 
-  std::string dstPath = path + ".phase7_dryrun_tmp";
-  // Make sure dst does NOT exist before the test
+class ObfuscatorIntegration : public ::testing::Test {
+ protected:
+  std::vector<std::string> tmpFiles_;
+
+  std::string tmpPath(const std::string& suffix) {
+    std::string p = kBinaryPath + suffix;
+    tmpFiles_.push_back(p);
+    return p;
+  }
+
+  void TearDown() override {
+    for (const auto& p : tmpFiles_) fs::remove(p);
+  }
+};
+
+TEST_F(ObfuscatorIntegration, DryRunDoesNotWriteFile) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_dryrun_tmp");
   fs::remove(dstPath);
 
   ObfuscatorConfig cfg;
-  cfg.images.push_back({path, dstPath});
+  cfg.images.push_back({kBinaryPath, dstPath});
   cfg.dryRun = true;
   cfg.verbose = false;
 
-  ObfuscatorPipeline pipeline(cfg);
-  ObfuscatorStats stats = pipeline.run();
+  ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
-  // Dry run must increment imagesProcessed (we analysed it)
-  ASSERT(stats.imagesProcessed == 1);
-
-  // But must NOT create the output file
-  ASSERT(!fs::exists(dstPath));
+  EXPECT_EQ(stats.imagesProcessed, 1u) << "dryRun must still count the image";
+  EXPECT_FALSE(fs::exists(dstPath)) << "dryRun must not create the output file";
 }
 
-// ── Integration tests ─────────────────────────────────────────────
+TEST_F(ObfuscatorIntegration, BasicPipelineProducesObfuscatedBinary) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_basic_tmp");
 
-void test_pipeline_basic() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
+  ObfuscatorConfig cfg;
+  cfg.images.push_back({kBinaryPath, dstPath});
+  cfg.mangler = std::make_shared<CaesarMangler>(13);
+  cfg.verbose = false;
 
-  std::string dstPath = path + ".phase7_basic_tmp";
+  ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
-  try {
-    ObfuscatorConfig cfg;
-    cfg.images.push_back({path, dstPath});
-    cfg.mangler = std::make_shared<CaesarMangler>(13);
-    cfg.verbose = true;
+  EXPECT_EQ(stats.imagesProcessed, 1u);
+  EXPECT_GT(stats.selectorPatches, 0u);
+  EXPECT_GT(stats.classPatches, 0u);
+  EXPECT_GT(stats.mangledSelectors, 0u);
+  EXPECT_GT(stats.mangledClasses, 0u);
+  EXPECT_GT(stats.whitelistSelectors, 0u);
+  EXPECT_GT(stats.whitelistClasses, 0u);
+  EXPECT_GT(stats.blacklistSelectors, 0u);
 
-    ObfuscatorPipeline pipeline(cfg);
-    ObfuscatorStats stats = pipeline.run();
+  ASSERT_TRUE(fs::exists(dstPath));
+  EXPECT_EQ(fs::file_size(dstPath), fs::file_size(kBinaryPath));
+  EXPECT_NE(readFile(kBinaryPath), readFile(dstPath));
 
-    // Basic sanity checks on stats
-    ASSERT(stats.imagesProcessed == 1);
-    ASSERT(stats.selectorPatches > 0);
-    ASSERT(stats.classPatches > 0);
-    ASSERT(stats.mangledSelectors > 0);
-    ASSERT(stats.mangledClasses > 0);
+  RecordProperty("selector_patches", std::to_string(stats.selectorPatches));
+  RecordProperty("class_patches", std::to_string(stats.classPatches));
+  RecordProperty("mangled_selectors", std::to_string(stats.mangledSelectors));
+  RecordProperty("mangled_classes", std::to_string(stats.mangledClasses));
+}
 
-    // Whitelist must be non-empty
-    ASSERT(stats.whitelistSelectors > 0);
-    ASSERT(stats.whitelistClasses > 0);
+TEST_F(ObfuscatorIntegration, EraseMethTypeZerosOutSection) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_erasemethtype_tmp");
 
-    // Blacklist must contain at least libobjc selectors
-    ASSERT(stats.blacklistSelectors > 0);
+  ObfuscatorConfig cfg;
+  cfg.images.push_back({kBinaryPath, dstPath});
+  cfg.mangler = std::make_shared<CaesarMangler>(13);
+  cfg.eraseMethType = true;
+  cfg.verbose = false;
 
-    // Output file must exist
-    ASSERT(fs::exists(dstPath));
+  EXPECT_EQ(ObfuscatorPipeline(cfg).run().imagesProcessed, 1u);
 
-    // Output file must have same size as input
-    ASSERT(fs::file_size(dstPath) == fs::file_size(path));
-
-    // Output must differ from input (something was patched)
-    auto original = readFile(path);
-    auto patched = readFile(dstPath);
-    ASSERT(original != patched);
-
-    std::cout << "\n    stats:"
-              << "\n      images processed:   " << stats.imagesProcessed
-              << "\n      selectors patched:  " << stats.selectorPatches
-              << "\n      classes patched:    " << stats.classPatches
-              << "\n      methtypes patched:  " << stats.methTypePatches
-              << "\n      whitelist selectors:" << stats.whitelistSelectors
-              << "\n      whitelist classes:  " << stats.whitelistClasses
-              << "\n      blacklist selectors:" << stats.blacklistSelectors
-              << "\n      mangled selectors:  " << stats.mangledSelectors
-              << "\n      mangled classes:    " << stats.mangledClasses << "\n";
-
-    fs::remove(dstPath);
-
-  } catch (...) {
-    fs::remove(dstPath);
-    throw;
+  MachOImage patched = loadMachOImage(dstPath);
+  for (const auto& slice : patched.slices) {
+    const MachSection* sec = slice.objcMethTypeSection();
+    if (!sec || sec->size == 0) continue;
+    const uint8_t* ptr = slice.data + sec->fileOffset;
+    for (uint64_t i = 0; i < sec->size; ++i) {
+      EXPECT_EQ(ptr[i], 0u)
+          << "__objc_methtype byte " << i << " not NUL after erase";
+    }
   }
 }
 
-void test_pipeline_erase_methtype() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
+TEST_F(ObfuscatorIntegration, SourceBinaryUnchanged) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_srccheck_tmp");
+  auto originalBytes = readFile(kBinaryPath);
 
-  std::string dstPath = path + ".phase7_erasemethtype_tmp";
+  ObfuscatorConfig cfg;
+  cfg.images.push_back({kBinaryPath, dstPath});
+  cfg.mangler = std::make_shared<CaesarMangler>(13);
+  ObfuscatorPipeline(cfg).run();
 
-  try {
-    ObfuscatorConfig cfg;
-    cfg.images.push_back({path, dstPath});
-    cfg.mangler = std::make_shared<CaesarMangler>(13);
-    cfg.eraseMethType = true;
-    cfg.verbose = false;
+  EXPECT_EQ(originalBytes, readFile(kBinaryPath))
+      << "Source binary was modified by the pipeline";
+}
 
-    ObfuscatorPipeline pipeline(cfg);
-    ObfuscatorStats stats = pipeline.run();
+TEST_F(ObfuscatorIntegration, ManualBlacklistPreservesSelector) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_blacklist_tmp");
 
-    ASSERT(stats.imagesProcessed == 1);
+  SymbolsCollector::Config scCfg;
+  scCfg.obfuscablePaths = {kBinaryPath};
+  ObfuscationSymbols symbols = SymbolsCollector::collect(scCfg);
+  ASSERT_FALSE(symbols.whitelist.selectors.empty());
 
-    // Verify __objc_methtype section is all NUL in the output
-    MachOImage patched = loadMachOImage(dstPath);
-    for (const auto& slice : patched.slices) {
-      const MachSection* sec = slice.objcMethTypeSection();
-      if (!sec || sec->size == 0) continue;
+  std::string blacklistedSel = *symbols.whitelist.selectors.begin();
 
-      const uint8_t* ptr = slice.data + sec->fileOffset;
-      bool allZero = true;
-      for (uint64_t i = 0; i < sec->size; ++i) {
-        if (ptr[i] != 0) {
-          allZero = false;
-          break;
+  ObfuscatorConfig cfg;
+  cfg.images.push_back({kBinaryPath, dstPath});
+  cfg.mangler = std::make_shared<CaesarMangler>(13);
+  cfg.manualSelectorBlacklist = {blacklistedSel};
+  ObfuscatorPipeline(cfg).run();
+
+  MachOImage patched = loadMachOImage(dstPath);
+  bool found = false;
+  for (const auto& slice : patched.slices) {
+    const MachSection* sec = slice.objcMethNameSection();
+    if (!sec) continue;
+    forEachString(slice, *sec, [&](const std::string& s) {
+      if (s == blacklistedSel) found = true;
+    });
+  }
+  EXPECT_TRUE(found) << "Blacklisted selector '" << blacklistedSel
+                     << "' not found unchanged in patched binary";
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  NEW: Obfuscated naming conventions
+//
+//  Uses RandomMangler because it GUARANTEES:
+//    - class names  → first char A-Z  (upper)
+//    - method names → first char a-z  (lower)
+//  CaesarMangler shifts bytes arithmetically and makes no such promise.
+//
+//  Strategy:
+//    1. Collect the mangling map so we know which names were actually
+//       obfuscated (whitelist → mangled name).
+//    2. Run the full pipeline to produce the output binary.
+//    3. Walk __objc_classname and __objc_methname in the output binary.
+//    4. For every string that IS a mangled value (i.e. it appears as a
+//       value in the map), assert the case rule holds.
+//       Strings that were NOT obfuscated (blacklisted / not in map) are
+//       intentionally skipped — we don't own their names.
+// ════════════════════════════════════════════════════════════════════
+TEST_F(ObfuscatorIntegration,
+       RandomManglerObfuscatedNamesFollowCaseConvention) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  std::string dstPath = tmpPath(".phase7_case_convention_tmp");
+
+  // ── Step 1: build the mangling map independently ─────────────
+  SymbolsCollector::Config scCfg;
+  scCfg.obfuscablePaths = {kBinaryPath};
+  ObfuscationSymbols symbols = SymbolsCollector::collect(scCfg);
+
+  const uint32_t kSeed = 42;
+  RandomMangler mangler(kSeed);
+  ManglingMap map = mangler.mangle(symbols);
+
+  ASSERT_FALSE(map.classNames.empty()) << "No classes were mangled";
+  ASSERT_FALSE(map.selectors.empty()) << "No selectors were mangled";
+
+  // Build reverse-lookup sets: mangled value → true
+  // These are the names we expect to find in the binary.
+  std::unordered_set<std::string> mangledClassValues;
+  for (const auto& [orig, mangled] : map.classNames)
+    mangledClassValues.insert(mangled);
+
+  std::unordered_set<std::string> mangledSelectorValues;
+  for (const auto& [orig, mangled] : map.selectors)
+    mangledSelectorValues.insert(mangled);
+
+  // ── Step 2: run the pipeline ──────────────────────────────────
+  ObfuscatorConfig cfg;
+  cfg.images.push_back({kBinaryPath, dstPath});
+  cfg.mangler = std::make_shared<RandomMangler>(kSeed);
+  cfg.verbose = false;
+
+  ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
+  ASSERT_EQ(stats.imagesProcessed, 1u);
+  ASSERT_GT(stats.classPatches, 0u);
+  ASSERT_GT(stats.selectorPatches, 0u);
+
+  // ── Step 3 & 4: walk the patched binary and check case rules ──
+  MachOImage patched = loadMachOImage(dstPath);
+  ASSERT_FALSE(patched.slices.empty());
+
+  uint32_t checkedClasses = 0;
+  uint32_t checkedSelectors = 0;
+
+  for (const auto& slice : patched.slices) {
+    // ── Class names: every obfuscated name must start A-Z ─────
+    const MachSection* classnameSec = slice.objcClassNameSection();
+    if (classnameSec) {
+      forEachString(slice, *classnameSec, [&](const std::string& name) {
+        if (mangledClassValues.count(name) == 0)
+          return;  // not obfuscated — skip
+        EXPECT_FALSE(name.empty());
+        EXPECT_TRUE(std::isupper(static_cast<unsigned char>(name[0])))
+            << "Obfuscated class name does not start with uppercase: '" << name
+            << "'";
+        ++checkedClasses;
+      });
+    }
+
+    // ── Method names: every obfuscated name must start a-z ────
+    const MachSection* methnameSec = slice.objcMethNameSection();
+    if (methnameSec) {
+      forEachString(slice, *methnameSec, [&](const std::string& name) {
+        if (mangledSelectorValues.count(name) == 0)
+          return;  // not obfuscated — skip
+
+        EXPECT_FALSE(name.empty());
+
+        // Setter selectors always begin with "set" + uppercase — that is
+        // correct ObjC convention and is not a violation of "lowercase first".
+        // We only enforce a-z on non-setter mangled selectors.
+        if (SymbolsCollector::isSetter(name)) {
+          // "set" prefix must be intact
+          EXPECT_EQ(name.substr(0, 3), "set")
+              << "Mangled setter does not begin with 'set': '" << name << "'";
+          EXPECT_EQ(name.back(), ':')
+              << "Mangled setter does not end with ':': '" << name << "'";
+        } else {
+          EXPECT_TRUE(std::islower(static_cast<unsigned char>(name[0])))
+              << "Obfuscated selector does not start with lowercase: '" << name
+              << "'";
         }
-      }
-      ASSERT(allZero);
+        ++checkedSelectors;
+      });
     }
-
-    fs::remove(dstPath);
-
-  } catch (...) {
-    fs::remove(dstPath);
-    throw;
   }
-}
 
-void test_pipeline_src_unchanged() {
-  // The source binary must never be modified
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
+  // Sanity guard: we must have actually checked something.
+  // If both are 0, the binary layout changed and the test is broken.
+  EXPECT_GT(checkedClasses, 0u)
+      << "No obfuscated class names were found in the patched binary — "
+         "verify the binary path and that RandomMangler used the same seed";
+  EXPECT_GT(checkedSelectors, 0u)
+      << "No obfuscated selectors were found in the patched binary";
 
-  std::string dstPath = path + ".phase7_srccheck_tmp";
-
-  auto originalBytes = readFile(path);
-
-  try {
-    ObfuscatorConfig cfg;
-    cfg.images.push_back({path, dstPath});
-    cfg.mangler = std::make_shared<CaesarMangler>(13);
-
-    ObfuscatorPipeline pipeline(cfg);
-    pipeline.run();
-
-    // Source must be byte-for-byte identical to before
-    auto afterBytes = readFile(path);
-    ASSERT(originalBytes == afterBytes);
-
-    fs::remove(dstPath);
-
-  } catch (...) {
-    fs::remove(dstPath);
-    throw;
-  }
-}
-
-void test_pipeline_manual_blacklist_respected() {
-  // Symbols in the manual blacklist must not appear in the output
-  // as mangled names — they must be left unchanged.
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
-
-  std::string dstPath = path + ".phase7_blacklist_tmp";
-
-  try {
-    // First: run without blacklist, collect what gets mangled
-    ObfuscatorConfig cfg1;
-    cfg1.images.push_back({path, path + ".phase7_bl_ref_tmp"});
-    cfg1.mangler = std::make_shared<CaesarMangler>(13);
-    cfg1.dryRun = true;  // just collect stats, don't write
-
-    // We need the symbols to know what to blacklist
-    SymbolsCollector::Config scCfg;
-    scCfg.obfuscablePaths = {path};
-    ObfuscationSymbols symbols = SymbolsCollector::collect(scCfg);
-
-    // Pick one selector from the whitelist to blacklist
-    if (symbols.whitelist.selectors.empty()) {
-      throw std::runtime_error("No whitelisted selectors to test with");
-    }
-    std::string blacklistedSel = *symbols.whitelist.selectors.begin();
-
-    // Now run with that selector blacklisted
-    ObfuscatorConfig cfg2;
-    cfg2.images.push_back({path, dstPath});
-    cfg2.mangler = std::make_shared<CaesarMangler>(13);
-    cfg2.manualSelectorBlacklist = {blacklistedSel};
-
-    ObfuscatorPipeline pipeline(cfg2);
-    pipeline.run();
-
-    // The blacklisted selector must appear unchanged in the output
-    MachOImage patched = loadMachOImage(dstPath);
-    bool found = false;
-    for (const auto& slice : patched.slices) {
-      const MachSection* sec = slice.objcMethNameSection();
-      if (!sec) continue;
-      uint64_t cursor = sec->fileOffset;
-      uint64_t end = sec->fileOffset + sec->size;
-      while (cursor < end) {
-        const char* ptr = reinterpret_cast<const char*>(slice.data + cursor);
-        size_t len = strnlen(ptr, static_cast<size_t>(end - cursor));
-        if (len > 0 && std::string(ptr, len) == blacklistedSel) {
-          found = true;
-          break;
-        }
-        cursor += len + 1;
-      }
-      if (found) break;
-    }
-    ASSERT(found);
-
-    fs::remove(dstPath);
-
-  } catch (...) {
-    fs::remove(dstPath);
-    throw;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-int main() {
-  std::cout << "=== Phase 7 Tests: Obfuscator Pipeline ===\n\n";
-
-  std::cout << "── Unit tests ──\n";
-  RUN(test_empty_config_returns_zero_stats);
-  RUN(test_default_mangler_is_set);
-  RUN(test_dry_run_does_not_write_file);
-
-  std::cout << "\n── Integration tests ──\n";
-  RUN(test_pipeline_basic);
-  RUN(test_pipeline_erase_methtype);
-  RUN(test_pipeline_src_unchanged);
-  RUN(test_pipeline_manual_blacklist_respected);
-
-  std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
-            << " failed ===\n";
-  return g_failed > 0 ? 1 : 0;
+  RecordProperty("checked_classes", std::to_string(checkedClasses));
+  RecordProperty("checked_selectors", std::to_string(checkedSelectors));
 }

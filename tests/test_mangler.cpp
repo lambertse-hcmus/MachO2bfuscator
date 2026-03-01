@@ -1,349 +1,243 @@
-#include <iostream>
-#include <stdexcept>
+#include <gtest/gtest.h>
+
+#include <cctype>
 
 #include "MachO2bfuscator/mangler.h"
 #include "MachO2bfuscator/symbol_sets.h"
 
-static int g_passed = 0, g_failed = 0;
-#define RUN(name)                                \
-  do {                                           \
-    std::cout << "  running " #name " ... ";     \
-    try {                                        \
-      name();                                    \
-      std::cout << "PASS\n";                     \
-      ++g_passed;                                \
-    } catch (const std::exception& e) {          \
-      std::cout << "FAIL: " << e.what() << "\n"; \
-      ++g_failed;                                \
-    }                                            \
-  } while (0)
-#define ASSERT(c)                                                    \
-  do {                                                               \
-    if (!(c))                                                        \
-      throw std::runtime_error("Assertion failed: " #c " at line " + \
-                               std::to_string(__LINE__));            \
-  } while (0)
-#define ASSERT_EQ(a, b)                                          \
-  do {                                                           \
-    if ((a) != (b))                                              \
-      throw std::runtime_error(std::string("Expected: ") + (b) + \
-                               " got: " + (a));                  \
-  } while (0)
+#ifdef TEST_OBJC_ABSOLUTE_PATH
+static const std::string kBinaryPath = "assets/testckey_objc";
+#else
+#warning \
+    "TEST_OBJC_ABSOLUTE_PATH is not defined. Some tests will be skipped that require a real binary."
+static const std::string kBinaryPath = "";
+#endif
 
-const std::string objCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
-    "testckey_objc";
-// ── CaesarMangler unit tests ──────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
+static ObfuscationSymbols makeSymbols(
+    std::unordered_set<std::string> selectors,
+    std::unordered_set<std::string> classes,
+    std::unordered_set<std::string> blacklistSels = {},
+    std::unordered_set<std::string> blacklistCls = {}) {
+  ObfuscationSymbols sym;
+  sym.whitelist.selectors = std::move(selectors);
+  sym.whitelist.classes = std::move(classes);
+  sym.blacklist.selectors = std::move(blacklistSels);
+  sym.blacklist.classes = std::move(blacklistCls);
+  return sym;
+}
 
-void test_caesar_plain_string() {
+// ════════════════════════════════════════════════════════════════════
+//  CaesarMangler
+// ════════════════════════════════════════════════════════════════════
+
+TEST(CaesarMangler, PlainStringChanges) {
   CaesarMangler m(13);
   std::string input = "viewDidLoad";
   std::string output = m.mangleString(input);
-  ASSERT(output.size() == input.size());
-  ASSERT(output != input);
+  EXPECT_EQ(output.size(), input.size());
+  EXPECT_NE(output, input);
 }
 
-void test_caesar_preserves_colon() {
+TEST(CaesarMangler, PreservesColon) {
   CaesarMangler m(13);
-  std::string input = "foo:bar:";
-  std::string output = m.mangleString(input);
-  ASSERT(output.size() == input.size());
-  ASSERT(output[3] == ':');
-  ASSERT(output[7] == ':');
+  std::string output = m.mangleString("foo:bar:");
+  EXPECT_EQ(output.size(), 8u);
+  EXPECT_EQ(output[3], ':');
+  EXPECT_EQ(output[7], ':');
 }
 
-void test_caesar_setter_prefix_preserved() {
+TEST(CaesarMangler, SetterPrefixPreserved) {
   CaesarMangler m(13);
-  std::string input = "setTitle:";
-  std::string output = m.mangleString(input);
-  ASSERT(output.substr(0, 3) == "set");
-  ASSERT(output.back() == ':');
-  ASSERT(output.size() == input.size());
+  std::string output = m.mangleString("setTitle:");
+  EXPECT_EQ(output.substr(0, 3), "set");
+  EXPECT_EQ(output.back(), ':');
+  EXPECT_EQ(output.size(), 9u);
 }
 
-void test_caesar_same_length() {
+TEST(CaesarMangler, SameLengthForVariousInputs) {
   CaesarMangler m(13);
   for (const std::string& s : {"init", "dealloc", "MyViewController",
                                "setFrame:", "applicationDidFinishLaunching:"}) {
-    ASSERT(m.mangleString(s).size() == s.size());
+    EXPECT_EQ(m.mangleString(s).size(), s.size())
+        << "Length mismatch for: " << s;
   }
 }
 
-void test_caesar_deterministic() {
+TEST(CaesarMangler, Deterministic) {
   CaesarMangler m(13);
-  ASSERT(m.mangleString("viewDidLoad") == m.mangleString("viewDidLoad"));
-  ASSERT(m.mangleString("MyClass") == m.mangleString("MyClass"));
+  EXPECT_EQ(m.mangleString("viewDidLoad"), m.mangleString("viewDidLoad"));
+  EXPECT_EQ(m.mangleString("MyClass"), m.mangleString("MyClass"));
 }
 
-void test_caesar_mangle_map() {
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad", "setTitle:"};
-  whitelist.classes = {"MyViewController"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
+TEST(CaesarMangler, ManglingMapContainsAllEntries) {
+  auto symbols =
+      makeSymbols({"viewDidLoad", "setTitle:"}, {"MyViewController"});
   CaesarMangler m(13);
   ManglingMap map = m.mangle(symbols);
 
-  ASSERT(map.selectors.count("viewDidLoad") == 1);
-  ASSERT(map.selectors.count("setTitle:") == 1);
-  ASSERT(map.classNames.count("MyViewController") == 1);
+  EXPECT_EQ(map.selectors.count("viewDidLoad"), 1u);
+  EXPECT_EQ(map.selectors.count("setTitle:"), 1u);
+  EXPECT_EQ(map.classNames.count("MyViewController"), 1u);
 
-  // Mangled setter must still start with "set" and end with ":"
   const auto& mangledSetter = map.selectors.at("setTitle:");
-  ASSERT(mangledSetter.substr(0, 3) == "set");
-  ASSERT(mangledSetter.back() == ':');
+  EXPECT_EQ(mangledSetter.substr(0, 3), "set");
+  EXPECT_EQ(mangledSetter.back(), ':');
 }
 
-// ── RandomMangler unit tests ──────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  RandomMangler
+// ════════════════════════════════════════════════════════════════════
 
-void test_random_same_length() {
-  RandomMangler m(42);
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad", "setTitle:", "init"};
-  whitelist.classes = {"MyViewController", "AppDelegate"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
-  ManglingMap map = m.mangle(symbols);
+TEST(RandomMangler, SameLength) {
+  auto symbols = makeSymbols({"viewDidLoad", "setTitle:", "init"},
+                             {"MyViewController", "AppDelegate"});
+  ManglingMap map = RandomMangler(42).mangle(symbols);
 
   for (const auto& [orig, mangled] : map.selectors) {
-    ASSERT(mangled.size() == orig.size());
+    EXPECT_EQ(mangled.size(), orig.size())
+        << "Length mismatch for selector: " << orig;
   }
   for (const auto& [orig, mangled] : map.classNames) {
-    ASSERT(mangled.size() == orig.size());
+    EXPECT_EQ(mangled.size(), orig.size())
+        << "Length mismatch for class: " << orig;
   }
 }
 
-void test_random_no_blacklist_clashes() {
-  RandomMangler m(42);
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad", "myMethod"};
-  whitelist.classes = {"MyClass"};
-  blacklist.selectors = {"retain", "release", "dealloc"};
-  blacklist.classes = {"NSObject"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
-  ManglingMap map = m.mangle(symbols);
+TEST(RandomMangler, NoBlacklistClashes) {
+  auto symbols = makeSymbols({"viewDidLoad", "myMethod"}, {"MyClass"},
+                             {"retain", "release", "dealloc"}, {"NSObject"});
+  ManglingMap map = RandomMangler(42).mangle(symbols);
 
   for (const auto& [orig, mangled] : map.selectors) {
-    ASSERT(blacklist.selectors.count(mangled) == 0);
+    EXPECT_EQ(symbols.blacklist.selectors.count(mangled), 0u)
+        << "Mangled selector clashes with blacklist: " << mangled;
   }
   for (const auto& [orig, mangled] : map.classNames) {
-    ASSERT(blacklist.classes.count(mangled) == 0);
+    EXPECT_EQ(symbols.blacklist.classes.count(mangled), 0u)
+        << "Mangled class clashes with blacklist: " << mangled;
   }
 }
 
-void test_random_class_names_start_uppercase() {
-  // First char of every mangled class name must be A-Z
-  // Mirrors Swift: .capitalizedOnFirstLetter
-  RandomMangler m(42);
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.classes = {"MyClass", "AppDelegate", "TableViewCell"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
-  ManglingMap map = m.mangle(symbols);
+TEST(RandomMangler, ClassNamesStartUppercase) {
+  auto symbols = makeSymbols({}, {"MyClass", "AppDelegate", "TableViewCell"});
+  ManglingMap map = RandomMangler(42).mangle(symbols);
 
   for (const auto& [orig, mangled] : map.classNames) {
-    ASSERT(!mangled.empty());
-    ASSERT(isupper(static_cast<unsigned char>(mangled[0])));
+    ASSERT_FALSE(mangled.empty());
+    EXPECT_TRUE(std::isupper(static_cast<unsigned char>(mangled[0])))
+        << "Class name does not start uppercase: " << mangled;
   }
 }
 
-void test_random_selectors_start_lowercase() {
-  // First char of every mangled non-setter selector must be a-z
-  // Mirrors ObjC selector naming convention
-  RandomMangler m(42);
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad", "init", "myMethod", "foo:bar:"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
-  ManglingMap map = m.mangle(symbols);
+TEST(RandomMangler, SelectorsStartLowercase) {
+  auto symbols =
+      makeSymbols({"viewDidLoad", "init", "myMethod", "foo:bar:"}, {});
+  ManglingMap map = RandomMangler(42).mangle(symbols);
 
   for (const auto& [orig, mangled] : map.selectors) {
-    ASSERT(!mangled.empty());
-    // First char must be a-z (lower) — never a digit or uppercase
-    ASSERT(islower(static_cast<unsigned char>(mangled[0])));
+    ASSERT_FALSE(mangled.empty());
+    EXPECT_TRUE(std::islower(static_cast<unsigned char>(mangled[0])))
+        << "Selector does not start lowercase: " << mangled;
   }
 }
 
-void test_random_setter_getter_consistency() {
-  // Mirrors Swift: test_mangleSymbols_shouldMangleSettersAndGettersCoherently
-  // If "title" → "xyzab" then "setTitle:" → "setXyzab:"
-  RandomMangler m(42);
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"title", "setTitle:"};
+TEST(RandomMangler, SetterGetterConsistency) {
+  auto symbols = makeSymbols({"title", "setTitle:"}, {});
+  ManglingMap map = RandomMangler(42).mangle(symbols);
 
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
-  ManglingMap map = m.mangle(symbols);
-
-  ASSERT(map.selectors.count("title") == 1);
-  ASSERT(map.selectors.count("setTitle:") == 1);
+  ASSERT_EQ(map.selectors.count("title"), 1u);
+  ASSERT_EQ(map.selectors.count("setTitle:"), 1u);
 
   const std::string& mangledGetter = map.selectors.at("title");
   const std::string& mangledSetter = map.selectors.at("setTitle:");
-
-  // Setter must be "set" + capitalised(mangledGetter) + ":"
   std::string expectedSetter = SymbolsCollector::toSetterName(mangledGetter);
-  ASSERT_EQ(mangledSetter, expectedSetter);
+  EXPECT_EQ(mangledSetter, expectedSetter)
+      << "Setter '" << mangledSetter << "' does not derive from getter '"
+      << mangledGetter << "'";
 }
 
-void test_random_deterministic_with_seed() {
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad", "init"};
-  whitelist.classes = {"MyClass"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
+TEST(RandomMangler, DeterministicWithSameSeed) {
+  auto symbols = makeSymbols({"viewDidLoad", "init"}, {"MyClass"});
   ManglingMap map1 = RandomMangler(12345).mangle(symbols);
   ManglingMap map2 = RandomMangler(12345).mangle(symbols);
 
-  ASSERT(map1.selectors == map2.selectors);
-  ASSERT(map1.classNames == map2.classNames);
+  EXPECT_EQ(map1.selectors, map2.selectors);
+  EXPECT_EQ(map1.classNames, map2.classNames);
 }
 
-void test_random_different_seeds_differ() {
-  ObjCSymbolSets whitelist, blacklist;
-  whitelist.selectors = {"viewDidLoad"};
-
-  ObfuscationSymbols symbols;
-  symbols.whitelist = whitelist;
-  symbols.blacklist = blacklist;
-
+TEST(RandomMangler, DifferentSeedsDiffer) {
+  auto symbols = makeSymbols({"viewDidLoad"}, {});
   ManglingMap map1 = RandomMangler(1).mangle(symbols);
   ManglingMap map2 = RandomMangler(2).mangle(symbols);
 
-  ASSERT(map1.selectors.at("viewDidLoad") != map2.selectors.at("viewDidLoad"));
+  EXPECT_NE(map1.selectors.at("viewDidLoad"), map2.selectors.at("viewDidLoad"));
 }
 
-// ── Integration test ──────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  Integration
+// ════════════════════════════════════════════════════════════════════
 
-void test_mangle_real_binary() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
+TEST(Integration, ManglerCaesarOnRealBinary) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  SymbolsCollector::Config cfg;
+  cfg.obfuscablePaths = {kBinaryPath};
+  ObfuscationSymbols symbols = SymbolsCollector::collect(cfg);
 
-  SymbolsCollector::Config config;
-  config.obfuscablePaths = {path};
+  CaesarMangler m(13);
+  ManglingMap map = m.mangle(symbols);
 
-  ObfuscationSymbols symbols = SymbolsCollector::collect(config);
+  EXPECT_FALSE(map.selectors.empty());
+  EXPECT_FALSE(map.classNames.empty());
 
-  // ── CaesarMangler ─────────────────────────────────────────────
-  {
-    CaesarMangler m(13);
-    ManglingMap map = m.mangle(symbols);
-
-    ASSERT(!map.selectors.empty());
-    ASSERT(!map.classNames.empty());
-
-    // Every entry must preserve byte length
-    for (const auto& [orig, mangled] : map.selectors) {
-      ASSERT(mangled.size() == orig.size());
-    }
-    for (const auto& [orig, mangled] : map.classNames) {
-      ASSERT(mangled.size() == orig.size());
-    }
-
-    std::cout << "\n    Caesar: " << map.selectors.size() << " selectors, "
-              << map.classNames.size() << " classes mangled\n";
+  for (const auto& [orig, mangled] : map.selectors) {
+    EXPECT_EQ(mangled.size(), orig.size()) << orig;
+  }
+  for (const auto& [orig, mangled] : map.classNames) {
+    EXPECT_EQ(mangled.size(), orig.size()) << orig;
   }
 
-  // ── RandomMangler ─────────────────────────────────────────────
-  {
-    RandomMangler m(42);
-    ManglingMap map = m.mangle(symbols);
-
-    ASSERT(!map.selectors.empty());
-    ASSERT(!map.classNames.empty());
-
-    // Every entry must preserve byte length
-    for (const auto& [orig, mangled] : map.selectors) {
-      ASSERT(mangled.size() == orig.size());
-    }
-
-    // Class names: first char must be A-Z
-    for (const auto& [orig, mangled] : map.classNames) {
-      ASSERT(mangled.size() == orig.size());
-      ASSERT(!mangled.empty());
-      ASSERT(isupper(static_cast<unsigned char>(mangled[0])));
-    }
-
-    // Non-setter selectors: first char must be a-z
-    for (const auto& [orig, mangled] : map.selectors) {
-      if (!SymbolsCollector::isSetter(orig)) {
-        ASSERT(!mangled.empty());
-        ASSERT(islower(static_cast<unsigned char>(mangled[0])));
-      }
-    }
-
-    // No mangled name must appear in the blacklist
-    for (const auto& [orig, mangled] : map.selectors) {
-      ASSERT(symbols.blacklist.selectors.count(mangled) == 0);
-    }
-    for (const auto& [orig, mangled] : map.classNames) {
-      ASSERT(symbols.blacklist.classes.count(mangled) == 0);
-    }
-
-    std::cout << "    Random: " << map.selectors.size() << " selectors, "
-              << map.classNames.size() << " classes mangled\n";
-
-    // Print a few examples so we can visually verify
-    std::cout << "    Examples:\n";
-    int shown = 0;
-    for (const auto& [orig, mangled] : map.classNames) {
-      std::cout << "      " << orig << " → " << mangled << "\n";
-      if (++shown >= 3) break;
-    }
-    shown = 0;
-    for (const auto& [orig, mangled] : map.selectors) {
-      std::cout << "      " << orig << " → " << mangled << "\n";
-      if (++shown >= 3) break;
-    }
-  }
+  RecordProperty("caesar_selectors", std::to_string(map.selectors.size()));
+  RecordProperty("caesar_classes", std::to_string(map.classNames.size()));
 }
 
-// ─────────────────────────────────────────────────────────────────
-int main() {
-  std::cout << "=== Phase 5 Tests: Symbol Mangling ===\n\n";
+TEST(Integration, ManglerRandomOnRealBinary) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  SymbolsCollector::Config cfg;
+  cfg.obfuscablePaths = {kBinaryPath};
+  ObfuscationSymbols symbols = SymbolsCollector::collect(cfg);
 
-  std::cout << "── CaesarMangler ──\n";
-  RUN(test_caesar_plain_string);
-  RUN(test_caesar_preserves_colon);
-  RUN(test_caesar_setter_prefix_preserved);
-  RUN(test_caesar_same_length);
-  RUN(test_caesar_deterministic);
-  RUN(test_caesar_mangle_map);
+  RandomMangler m(42);
+  ManglingMap map = m.mangle(symbols);
 
-  std::cout << "\n── RandomMangler ──\n";
-  RUN(test_random_same_length);
-  RUN(test_random_no_blacklist_clashes);
-  RUN(test_random_class_names_start_uppercase);
-  RUN(test_random_selectors_start_lowercase);  // ← new
-  RUN(test_random_setter_getter_consistency);
-  RUN(test_random_deterministic_with_seed);
-  RUN(test_random_different_seeds_differ);
+  EXPECT_FALSE(map.selectors.empty());
+  EXPECT_FALSE(map.classNames.empty());
 
-  std::cout << "\n── Integration ──\n";
-  RUN(test_mangle_real_binary);
+  for (const auto& [orig, mangled] : map.classNames) {
+    EXPECT_EQ(mangled.size(), orig.size());
+    ASSERT_FALSE(mangled.empty());
+    EXPECT_TRUE(std::isupper(static_cast<unsigned char>(mangled[0])));
+  }
+  for (const auto& [orig, mangled] : map.selectors) {
+    EXPECT_EQ(mangled.size(), orig.size());
+    if (!SymbolsCollector::isSetter(orig)) {
+      ASSERT_FALSE(mangled.empty());
+      EXPECT_TRUE(std::islower(static_cast<unsigned char>(mangled[0])));
+    }
+    EXPECT_EQ(symbols.blacklist.selectors.count(mangled), 0u)
+        << "Mangled selector in blacklist: " << mangled;
+  }
+  for (const auto& [orig, mangled] : map.classNames) {
+    EXPECT_EQ(symbols.blacklist.classes.count(mangled), 0u)
+        << "Mangled class in blacklist: " << mangled;
+  }
 
-  std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
-            << " failed ===\n";
-  return g_failed > 0 ? 1 : 0;
+  RecordProperty("random_selectors", std::to_string(map.selectors.size()));
+  RecordProperty("random_classes", std::to_string(map.classNames.size()));
 }

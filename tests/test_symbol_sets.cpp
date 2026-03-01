@@ -1,109 +1,80 @@
-#include <iostream>
-#include <stdexcept>
+#include <gtest/gtest.h>
 
 #include "MachO2bfuscator/mach_reader.h"
 #include "MachO2bfuscator/symbol_sets.h"
 
-static int g_passed = 0, g_failed = 0;
-#define RUN(name)                                \
-  do {                                           \
-    std::cout << "  running " #name " ... ";     \
-    try {                                        \
-      name();                                    \
-      std::cout << "PASS\n";                     \
-      ++g_passed;                                \
-    } catch (const std::exception& e) {          \
-      std::cout << "FAIL: " << e.what() << "\n"; \
-      ++g_failed;                                \
-    }                                            \
-  } while (0)
-#define ASSERT(c)                                                    \
-  do {                                                               \
-    if (!(c))                                                        \
-      throw std::runtime_error("Assertion failed: " #c " at line " + \
-                               std::to_string(__LINE__));            \
-  } while (0)
-#define ASSERT_EQ(a, b)                                                 \
-  do {                                                                  \
-    if ((a) != (b))                                                     \
-      throw std::runtime_error("Expected equal: " + std::to_string(a) + \
-                               " vs " + std::to_string(b));             \
-  } while (0)
+#ifdef TEST_OBJC_ABSOLUTE_PATH
+static const std::string kBinaryPath = "assets/testckey_objc";
+#else
+#warning \
+    "TEST_OBJC_ABSOLUTE_PATH is not defined. Some tests will be skipped that require a real binary."
+static const std::string kBinaryPath = "";
+#endif
 
-const std::string objCPath = "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/testckey_objc";
-// ── Unit tests (no binary needed) ────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  Unit tests
+// ════════════════════════════════════════════════════════════════════
 
-void test_setter_name_generation() {
-  ASSERT(SymbolsCollector::toSetterName("title") == "setTitle:");
-  ASSERT(SymbolsCollector::toSetterName("isHidden") == "setIsHidden:");
-  ASSERT(SymbolsCollector::toSetterName("x") == "setX:");
-  ASSERT(SymbolsCollector::toSetterName("") == "");
+TEST(SymbolSets, SetterNameGeneration) {
+  EXPECT_EQ(SymbolsCollector::toSetterName("title"), "setTitle:");
+  EXPECT_EQ(SymbolsCollector::toSetterName("isHidden"), "setIsHidden:");
+  EXPECT_EQ(SymbolsCollector::toSetterName("x"), "setX:");
+  EXPECT_EQ(SymbolsCollector::toSetterName(""), "");
 }
 
-void test_is_setter_detection() {
-  ASSERT(SymbolsCollector::isSetter("setTitle:"));
-  ASSERT(SymbolsCollector::isSetter("setIsHidden:"));
-  ASSERT(!SymbolsCollector::isSetter("title"));
-  ASSERT(!SymbolsCollector::isSetter("settitle:"));  // lowercase 't' after set
-  ASSERT(!SymbolsCollector::isSetter("setTitle"));   // no trailing ':'
-  ASSERT(!SymbolsCollector::isSetter("set:"));       // no uppercase after 'set'
-  ASSERT(!SymbolsCollector::isSetter(""));
+TEST(SymbolSets, IsSetterDetection) {
+  EXPECT_TRUE(SymbolsCollector::isSetter("setTitle:"));
+  EXPECT_TRUE(SymbolsCollector::isSetter("setIsHidden:"));
+  EXPECT_FALSE(SymbolsCollector::isSetter("title"));
+  EXPECT_FALSE(SymbolsCollector::isSetter("settitle:"));  // lowercase after set
+  EXPECT_FALSE(SymbolsCollector::isSetter("setTitle"));  // missing trailing ':'
+  EXPECT_FALSE(SymbolsCollector::isSetter("set:"));  // no uppercase after 'set'
+  EXPECT_FALSE(SymbolsCollector::isSetter(""));
 }
 
-void test_objcsymbolsets_merge() {
+TEST(SymbolSets, ObjCSymbolSetsMerge) {
   ObjCSymbolSets a, b;
   a.selectors = {"viewDidLoad", "init"};
   a.classes = {"MyViewController"};
-
-  b.selectors = {"dealloc", "init"};  // "init" is duplicate
+  b.selectors = {"dealloc", "init"};  // "init" duplicate
   b.classes = {"AppDelegate"};
 
   a.mergeFrom(b);
 
-  // Union — no duplicates
-  ASSERT(a.selectors.size() == 3);
-  ASSERT(a.classes.size() == 2);
-  ASSERT(a.selectors.count("viewDidLoad") == 1);
-  ASSERT(a.selectors.count("init") == 1);
-  ASSERT(a.selectors.count("dealloc") == 1);
-  ASSERT(a.classes.count("MyViewController") == 1);
-  ASSERT(a.classes.count("AppDelegate") == 1);
+  EXPECT_EQ(a.selectors.size(), 3u);
+  EXPECT_EQ(a.classes.size(), 2u);
+  EXPECT_EQ(a.selectors.count("viewDidLoad"), 1u);
+  EXPECT_EQ(a.selectors.count("init"), 1u);
+  EXPECT_EQ(a.selectors.count("dealloc"), 1u);
+  EXPECT_EQ(a.classes.count("MyViewController"), 1u);
+  EXPECT_EQ(a.classes.count("AppDelegate"), 1u);
 }
 
-void test_libobjc_selectors_are_always_blacklisted() {
-  // Even with no binaries, libobjc selectors must end up in blacklist
-  SymbolsCollector::Config config;
-  // No binaries — empty config
+TEST(SymbolSets, LibobjcSelectorsAlwaysBlacklisted) {
+  SymbolsCollector::Config config;  // empty — no binaries
   ObfuscationSymbols symbols = SymbolsCollector::collect(config);
 
-  // libobjc selectors must be in blacklist
-  ASSERT(symbols.blacklist.selectors.count("retain") == 1);
-  ASSERT(symbols.blacklist.selectors.count("release") == 1);
-  ASSERT(symbols.blacklist.selectors.count("dealloc") == 1);
-  ASSERT(symbols.blacklist.selectors.count("alloc") == 1);
+  EXPECT_EQ(symbols.blacklist.selectors.count("retain"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("release"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("dealloc"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("alloc"), 1u);
 
-  // Whitelist must be empty (no user binaries)
-  ASSERT(symbols.whitelist.selectors.empty());
-  ASSERT(symbols.whitelist.classes.empty());
+  EXPECT_TRUE(symbols.whitelist.selectors.empty());
+  EXPECT_TRUE(symbols.whitelist.classes.empty());
 }
 
-void test_manual_blacklist_respected() {
+TEST(SymbolSets, ManualBlacklistRespected) {
   SymbolsCollector::Config config;
   config.manualClassBlacklist = {"ForbiddenClass"};
   config.manualSelectorBlacklist = {"forbiddenMethod"};
 
   ObfuscationSymbols symbols = SymbolsCollector::collect(config);
 
-  ASSERT(symbols.blacklist.classes.count("ForbiddenClass") == 1);
-  ASSERT(symbols.blacklist.selectors.count("forbiddenMethod") == 1);
+  EXPECT_EQ(symbols.blacklist.classes.count("ForbiddenClass"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("forbiddenMethod"), 1u);
 }
 
-void test_whitelist_excludes_blacklisted_symbols() {
-  // Simulate: user binary has symbols A, B, C
-  // System binary has symbol B
-  // Expected: whitelist = {A, C}, blacklist contains B, removedList = {B}
-
-  // We test this logic directly via the set operations
+TEST(SymbolSets, WhitelistExcludesBlacklistedSymbols) {
   ObjCSymbolSets userSymbols;
   userSymbols.classes = {"ClassA", "ClassB", "ClassC"};
   userSymbols.selectors = {"methodA", "methodB", "methodC"};
@@ -112,129 +83,96 @@ void test_whitelist_excludes_blacklisted_symbols() {
   systemSymbols.classes = {"ClassB"};
   systemSymbols.selectors = {"methodB"};
 
-  // Build blacklist manually (mirrors collect() logic)
   ObjCSymbolSets blacklist;
   blacklist.mergeFrom(systemSymbols);
 
-  // Build whitelist
-  ObjCSymbolSets whitelist;
+  ObjCSymbolSets whitelist, removedList;
   for (const auto& c : userSymbols.classes) {
-    if (!blacklist.classes.count(c)) whitelist.classes.insert(c);
+    if (!blacklist.classes.count(c))
+      whitelist.classes.insert(c);
+    else
+      removedList.classes.insert(c);
   }
   for (const auto& s : userSymbols.selectors) {
-    if (!blacklist.selectors.count(s)) whitelist.selectors.insert(s);
+    if (!blacklist.selectors.count(s))
+      whitelist.selectors.insert(s);
+    else
+      removedList.selectors.insert(s);
   }
 
-  // Build removedList
-  ObjCSymbolSets removedList;
-  for (const auto& c : userSymbols.classes) {
-    if (blacklist.classes.count(c)) removedList.classes.insert(c);
-  }
-  for (const auto& s : userSymbols.selectors) {
-    if (blacklist.selectors.count(s)) removedList.selectors.insert(s);
-  }
+  EXPECT_EQ(whitelist.classes.count("ClassA"), 1u);
+  EXPECT_EQ(whitelist.classes.count("ClassC"), 1u);
+  EXPECT_EQ(whitelist.classes.count("ClassB"), 0u);  // blacklisted
+  EXPECT_EQ(removedList.classes.count("ClassB"), 1u);
 
-  ASSERT(whitelist.classes.count("ClassA") == 1);
-  ASSERT(whitelist.classes.count("ClassC") == 1);
-  ASSERT(whitelist.classes.count("ClassB") == 0);  // blacklisted
-  ASSERT(removedList.classes.count("ClassB") == 1);
-  ASSERT(whitelist.selectors.count("methodA") == 1);
-  ASSERT(whitelist.selectors.count("methodC") == 1);
-  ASSERT(whitelist.selectors.count("methodB") == 0);
-  ASSERT(removedList.selectors.count("methodB") == 1);
+  EXPECT_EQ(whitelist.selectors.count("methodA"), 1u);
+  EXPECT_EQ(whitelist.selectors.count("methodC"), 1u);
+  EXPECT_EQ(whitelist.selectors.count("methodB"), 0u);
+  EXPECT_EQ(removedList.selectors.count("methodB"), 1u);
 }
 
-void test_setter_blacklisting() {
-  // If "title" is blacklisted (from a system binary),
-  // then "setTitle:" must also be automatically blacklisted.
+TEST(SymbolSets, SetterDerivationInBlacklist) {
+  // If "title" is blacklisted, "setTitle:" must also be blacklisted.
   SymbolsCollector::Config config;
   config.manualSelectorBlacklist = {"title"};
 
   ObfuscationSymbols symbols = SymbolsCollector::collect(config);
 
-  ASSERT(symbols.blacklist.selectors.count("title") == 1);
-  ASSERT(symbols.blacklist.selectors.count("setTitle:") == 1);
+  EXPECT_EQ(symbols.blacklist.selectors.count("title"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("setTitle:"), 1u);
 }
 
-// ── Integration tests (use YOUR test binary) ──────────────���───────
+// ════════════════════════════════════════════════════════════════════
+//  Integration tests
+// ════════════════════════════════════════════════════════════════════
 
-void test_collect_from_test_binary() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
-
+TEST(Integration, SymbolSetsCollectFromBinary) {
   SymbolsCollector::Config config;
-  config.obfuscablePaths = {path};
-  // No unobfuscable paths — we just want to see user symbols
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  config.obfuscablePaths = {kBinaryPath};
 
   ObfuscationSymbols symbols = SymbolsCollector::collect(config);
 
-  // Must have found some obfuscatable symbols
-  ASSERT(!symbols.whitelist.classes.empty());
-  ASSERT(!symbols.whitelist.selectors.empty());
+  EXPECT_FALSE(symbols.whitelist.classes.empty());
+  EXPECT_FALSE(symbols.whitelist.selectors.empty());
 
-  // libobjc selectors must always be blacklisted
-  ASSERT(symbols.blacklist.selectors.count("retain") == 1);
-  ASSERT(symbols.blacklist.selectors.count("dealloc") == 1);
+  EXPECT_EQ(symbols.blacklist.selectors.count("retain"), 1u);
+  EXPECT_EQ(symbols.blacklist.selectors.count("dealloc"), 1u);
 
-  // No whitelisted symbol should also appear in the blacklist
+  // No whitelisted symbol may appear in the blacklist
   for (const auto& cls : symbols.whitelist.classes) {
-    ASSERT(symbols.blacklist.classes.count(cls) == 0);
+    EXPECT_EQ(symbols.blacklist.classes.count(cls), 0u)
+        << "Whitelisted class also in blacklist: " << cls;
   }
   for (const auto& sel : symbols.whitelist.selectors) {
-    ASSERT(symbols.blacklist.selectors.count(sel) == 0);
+    EXPECT_EQ(symbols.blacklist.selectors.count(sel), 0u)
+        << "Whitelisted selector also in blacklist: " << sel;
   }
 
-  std::cout << "\n    whitelist:   " << symbols.whitelist.classes.size()
-            << " classes, " << symbols.whitelist.selectors.size()
-            << " selectors\n";
-  std::cout << "    blacklist:   " << symbols.blacklist.classes.size()
-            << " classes, " << symbols.blacklist.selectors.size()
-            << " selectors\n";
-  std::cout << "    removedList: " << symbols.removedList.classes.size()
-            << " classes, " << symbols.removedList.selectors.size()
-            << " selectors\n";
+  RecordProperty("whitelist_classes",
+                 std::to_string(symbols.whitelist.classes.size()));
+  RecordProperty("whitelist_selectors",
+                 std::to_string(symbols.whitelist.selectors.size()));
+  RecordProperty("blacklist_selectors",
+                 std::to_string(symbols.blacklist.selectors.size()));
 }
 
-void test_unobfuscable_symbols_removed_from_whitelist() {
-  const std::string path = objCPath;
-  if (path.empty()) throw std::runtime_error("objCPath not set");
-
-  // Use the same binary as BOTH obfuscable and unobfuscable.
-  // Result: ALL user symbols become blacklisted → whitelist must be empty.
-  // where blacklist ⊇ systemSymbols = userSymbols → whitelist = ∅
+TEST(Integration, SymbolSetsUnobfuscableEmptiesWhitelist) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  // Same binary as both obfuscable and unobfuscable → whitelist must be empty.
   SymbolsCollector::Config config;
-  config.obfuscablePaths = {path};
-  config.unobfuscablePaths = {path};  // same binary = fully blacklisted
+  config.obfuscablePaths = {kBinaryPath};
+  config.unobfuscablePaths = {kBinaryPath};
 
   ObfuscationSymbols symbols = SymbolsCollector::collect(config);
 
-  // Whitelist must be empty because all user symbols are also system symbols
-  ASSERT(symbols.whitelist.classes.empty());
-  ASSERT(symbols.whitelist.selectors.empty());
-
-  // removedList must contain everything that was in the user binary
-  ASSERT(!symbols.removedList.classes.empty());
-}
-
-// ─────────────────────────────────────────────────────────────────
-int main() {
-  std::cout << "=== Phase 4 Tests: Symbol Whitelist & Blacklist ===\n\n";
-
-  std::cout << "── Unit tests ──\n";
-  RUN(test_setter_name_generation);
-  RUN(test_is_setter_detection);
-  RUN(test_objcsymbolsets_merge);
-  RUN(test_libobjc_selectors_are_always_blacklisted);
-  RUN(test_manual_blacklist_respected);
-  RUN(test_whitelist_excludes_blacklisted_symbols);
-  RUN(test_setter_blacklisting);
-
-  std::cout << "\n── Integration tests (binary: " << objCPath
-            << ") ──\n";
-  RUN(test_collect_from_test_binary);
-  RUN(test_unobfuscable_symbols_removed_from_whitelist);
-
-  std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
-            << " failed ===\n";
-  return g_failed > 0 ? 1 : 0;
+  EXPECT_TRUE(symbols.whitelist.classes.empty());
+  EXPECT_TRUE(symbols.whitelist.selectors.empty());
+  EXPECT_FALSE(symbols.removedList.classes.empty());
 }

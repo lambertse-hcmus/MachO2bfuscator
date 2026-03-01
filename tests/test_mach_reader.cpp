@@ -1,72 +1,36 @@
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
+#include <gtest/gtest.h>
 
 #include "MachO2bfuscator/mach_reader.h"
 
-// ── Minimal test harness ─────────────────────────────────────────
-static int g_passed = 0;
-static int g_failed = 0;
+#ifdef TEST_OBJC_ABSOLUTE_PATH
+static const std::string kBinaryPath = "assets/testckey_objc";
+#else
+#warning \
+    "TEST_OBJC_ABSOLUTE_PATH is not defined. Some tests will be skipped that require a real binary."
+static const std::string kBinaryPath = "";
+#endif
 
-#define TEST(name) void name()
-#define RUN(name)                                \
-  do {                                           \
-    std::cout << "  running " #name " ... ";     \
-    try {                                        \
-      name();                                    \
-      std::cout << "PASS\n";                     \
-      ++g_passed;                                \
-    } catch (const std::exception& e) {          \
-      std::cout << "FAIL: " << e.what() << "\n"; \
-      ++g_failed;                                \
-    }                                            \
-  } while (0)
+// ════════════════════════════════════════════════════════════════════
+//  Unit tests — no binary required
+// ════════════════════════════════════════════════════════════════════
 
-#define ASSERT(cond)                                                    \
-  do {                                                                  \
-    if (!(cond))                                                        \
-      throw std::runtime_error("Assertion failed: " #cond " at line " + \
-                               std::to_string(__LINE__));               \
-  } while (0)
-
-#define ASSERT_EQ(a, b)                                                        \
-  do {                                                                         \
-    if ((a) != (b)) throw std::runtime_error("Expected equal: " #a " vs " #b); \
-  } while (0)
-
-const std::string obcCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
-    "testckey_objc";
-// ── Test: loading a non-existent file throws ─────────────────────
-TEST(test_load_nonexistent_throws) {
-  bool threw = false;
-  try {
-    loadMachOImage("/nonexistent/path/to/binary");
-  } catch (const MachLoadError&) {
-    threw = true;
-  }
-  ASSERT(threw);
+TEST(MachReader, LoadNonExistentThrows) {
+  EXPECT_THROW(loadMachOImage("/nonexistent/path/to/binary"), MachLoadError);
 }
 
-// ── Test: FileRange helper ────────────────────────────────────────
-TEST(test_file_range) {
+TEST(MachReader, FileRangeHelper) {
   FileRange r{100, 50};
-  ASSERT_EQ(r.offset, 100u);
-  ASSERT_EQ(r.size, 50u);
-  ASSERT_EQ(r.end(), 150u);
-  ASSERT(!r.empty());
+  EXPECT_EQ(r.offset, 100u);
+  EXPECT_EQ(r.size, 50u);
+  EXPECT_EQ(r.end(), 150u);
+  EXPECT_FALSE(r.empty());
 
   FileRange empty{0, 0};
-  ASSERT(empty.empty());
+  EXPECT_TRUE(empty.empty());
 }
 
-// ── Test: vmOffset → fileOffset translation ──────────────────────
-// Build a synthetic MachOSlice with one segment and verify translation.
-TEST(test_vm_to_file_offset) {
+TEST(MachReader, VmToFileOffsetBasic) {
   MachOSlice slice;
-
-  // Fake segment: vm [0x100000000, 0x100001000), file [0x0, 0x1000)
   MachSegment seg;
   seg.name = "__TEXT";
   seg.vmAddr = 0x100000000ULL;
@@ -75,13 +39,11 @@ TEST(test_vm_to_file_offset) {
   seg.fileSize = 0x1000;
   slice.segments.push_back(seg);
 
-  // vmAddr 0x100000500 should map to fileOffset 0x500
   uint64_t off = slice.fileOffsetFromVmOffset(0x100000500ULL);
-  ASSERT_EQ(off, 0x500u);
+  EXPECT_EQ(off, 0x500u);
 }
 
-// ── Test: vmOffset outside all segments throws ───────────────────
-TEST(test_vm_to_file_offset_out_of_bounds) {
+TEST(MachReader, VmToFileOffsetOutOfBoundsThrows) {
   MachOSlice slice;
   MachSegment seg;
   seg.vmAddr = 0x100000000ULL;
@@ -90,19 +52,11 @@ TEST(test_vm_to_file_offset_out_of_bounds) {
   seg.fileSize = 0x1000;
   slice.segments.push_back(seg);
 
-  bool threw = false;
-  try {
-    slice.fileOffsetFromVmOffset(0x200000000ULL);  // outside segment
-  } catch (const MachLoadError&) {
-    threw = true;
-  }
-  ASSERT(threw);
+  EXPECT_THROW(slice.fileOffsetFromVmOffset(0x200000000ULL), MachLoadError);
 }
 
-// ── Test: findSection ────────────────────────────────────────────
-TEST(test_find_section) {
+TEST(MachReader, FindSection) {
   MachOSlice slice;
-
   MachSection sec;
   sec.segmentName = "__TEXT";
   sec.sectionName = "__objc_classname";
@@ -115,21 +69,17 @@ TEST(test_find_section) {
   slice.segments.push_back(seg);
 
   const MachSection* found = slice.findSection("__TEXT", "__objc_classname");
-  ASSERT(found != nullptr);
-  ASSERT_EQ(found->fileOffset, 0x1000u);
-  ASSERT_EQ(found->size, 0x200u);
+  ASSERT_NE(found, nullptr);
+  EXPECT_EQ(found->fileOffset, 0x1000u);
+  EXPECT_EQ(found->size, 0x200u);
 
-  // Missing section returns nullptr
-  ASSERT(slice.findSection("__TEXT", "__objc_methname") == nullptr);
-  // Missing segment returns nullptr
-  ASSERT(slice.findSection("__DATA", "__objc_classname") == nullptr);
+  EXPECT_EQ(slice.findSection("__TEXT", "__objc_methname"), nullptr);
+  EXPECT_EQ(slice.findSection("__DATA", "__objc_classname"), nullptr);
 }
 
-// ── Test: named accessor convenience methods ──────────────────────
-TEST(test_named_section_accessors) {
+TEST(MachReader, NamedSectionAccessors) {
   MachOSlice slice;
 
-  // Add __TEXT segment with __objc_classname
   MachSegment textSeg;
   textSeg.name = "__TEXT";
   {
@@ -150,7 +100,6 @@ TEST(test_named_section_accessors) {
   }
   slice.segments.push_back(textSeg);
 
-  // Add __DATA segment with __objc_classlist
   MachSegment dataSeg;
   dataSeg.name = "__DATA";
   {
@@ -163,25 +112,30 @@ TEST(test_named_section_accessors) {
   }
   slice.segments.push_back(dataSeg);
 
-  ASSERT(slice.objcClassNameSection() != nullptr);
-  ASSERT(slice.objcMethNameSection() != nullptr);
-  ASSERT(slice.objcClasslistSection() != nullptr);
-  ASSERT(slice.objcMethTypeSection() == nullptr);  // not added
-  ASSERT(slice.objcCatlistSection() == nullptr);   // not added
+  EXPECT_NE(slice.objcClassNameSection(), nullptr);
+  EXPECT_NE(slice.objcMethNameSection(), nullptr);
+  EXPECT_NE(slice.objcClasslistSection(), nullptr);
+  EXPECT_EQ(slice.objcMethTypeSection(), nullptr);
+  EXPECT_EQ(slice.objcCatlistSection(), nullptr);
 
-  ASSERT_EQ(slice.objcClassNameSection()->fileOffset, 0x100u);
-  ASSERT_EQ(slice.objcMethNameSection()->fileOffset, 0x200u);
-  ASSERT_EQ(slice.objcClasslistSection()->fileOffset, 0x500u);
+  EXPECT_EQ(slice.objcClassNameSection()->fileOffset, 0x100u);
+  EXPECT_EQ(slice.objcMethNameSection()->fileOffset, 0x200u);
+  EXPECT_EQ(slice.objcClasslistSection()->fileOffset, 0x500u);
 }
 
-// This is an integration test against a real system binary.
-TEST(test_load_real_binary) {
-  MachOImage image = loadMachOImage(obcCPath);
+// ════════════════���════════════════════════��══════════════════════════
+//  Integration tests — require asset binary on disk
+//  Skip on CI: --gtest_filter=-Integration.*
+// ════════════════════════════════════════════════════════════════════
 
-  // Should have at least one slice
-  ASSERT(!image.slices.empty());
+TEST(Integration, MachReaderLoadsRealBinary) {
+  if (kBinaryPath.empty()) {
+    GTEST_SKIP() << "TEST_OBJC_ABSOLUTE_PATH is not defined, skipping test "
+                    "that requires a real binary.";
+  }
+  MachOImage image = loadMachOImage(kBinaryPath);
+  ASSERT_FALSE(image.slices.empty());
 
-  // Every slice must have at least a __TEXT segment
   for (const auto& slice : image.slices) {
     bool hasText = false;
     for (const auto& seg : slice.segments) {
@@ -190,24 +144,6 @@ TEST(test_load_real_binary) {
         break;
       }
     }
-    ASSERT(hasText);
+    EXPECT_TRUE(hasText) << "Slice missing __TEXT segment";
   }
-}
-
-// ────────────────────────────────────────────────────────────────
-int main() {
-  std::cout
-      << "=== Phase 1 Tests: Mach-O Binary Loading & Section Lookup ===\n\n";
-
-  RUN(test_load_nonexistent_throws);
-  RUN(test_file_range);
-  RUN(test_vm_to_file_offset);
-  RUN(test_vm_to_file_offset_out_of_bounds);
-  RUN(test_find_section);
-  RUN(test_named_section_accessors);
-  RUN(test_load_real_binary);
-
-  std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
-            << " failed ===\n";
-  return g_failed > 0 ? 1 : 0;
 }
