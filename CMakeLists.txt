@@ -26,9 +26,12 @@ add_library(${PROJECT_NAME_LIB}
     src/binary_patcher.cpp
     src/obfuscator.cpp
     src/logger.cpp
+    src/cli/cli_parser.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)
+# === Third party dependencies ===
+target_include_directories(${PROJECT_NAME_LIB} PRIVATE 3rdparty/cxxopts/include)
 
 # === CLI executable ===
 add_executable(${PROJECT_NAME_CLI}

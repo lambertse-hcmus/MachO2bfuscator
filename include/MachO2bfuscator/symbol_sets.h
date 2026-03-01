@@ -4,9 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "MachO2bfuscator/mach_reader.h"
-#include "MachO2bfuscator/objc_extractor.h"
-#include "MachO2bfuscator/objc_types.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  ObjCSymbolSets

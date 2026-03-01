@@ -1,7 +1,6 @@
 #include "MachO2bfuscator/symbol_sets.h"
 #include "logger.h"
-
-#include <stdexcept>
+#include "MachO2bfuscator/objc_extractor.h"
 
 // ── ObjCSymbolSets::mergeFrom ─────────────────────────────────────
 void ObjCSymbolSets::mergeFrom(const ObjCSymbolSets& other) {

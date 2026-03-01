@@ -1,9 +1,12 @@
 #include "MachO2bfuscator/obfuscator.h"
+#include "MachO2bfuscator/binary_patcher.h"
+#include "MachO2bfuscator/mangler.h"
 
 #include <fstream>
 #include <stdexcept>
 
 #include "logger.h"
+#include <random>
 
 // ── ObfuscatorPipeline ────────────────────────────────────────────
 
@@ -30,6 +33,19 @@ void ObfuscatorPipeline::eraseSectionIfPresent(MachOSlice& slice,
   if (sec->fileOffset + sec->size > slice.dataSize) return;
 
   std::memset(slice.data + sec->fileOffset, 0, static_cast<size_t>(sec->size));
+}
+
+void ObfuscatorPipeline::ensureMangler() {
+  if (config_.mangler) return;  // already set — programmatic path, do nothing
+
+  if (config_.manglerType == "caesar") {
+    config_.mangler = std::make_shared<CaesarMangler>(config_.caesarKey);
+  } else {
+    // "random" (default)
+    uint32_t seed = config_.randomSeed;
+    if (seed == 0) seed = std::random_device{}();
+    config_.mangler = std::make_shared<RandomMangler>(seed);
+  }
 }
 
 // ── eraseSymtab ───────────────────────────────────────────────────
@@ -100,6 +116,7 @@ ManglingMap ObfuscatorPipeline::buildManglingMap(
 //      c. Optionally erase symtab         (Phase 6 extra)
 //      d. Write to dstPath
 ObfuscatorStats ObfuscatorPipeline::run() {
+  ensureMangler();
   ObfuscatorStats stats;
 
   if (config_.images.empty()) {

@@ -2,11 +2,9 @@
 
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "MachO2bfuscator/mach_reader.h"
 #include "MachO2bfuscator/mangling_map.h"
-#include "MachO2bfuscator/objc_extractor.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  MethTypeObfuscator
