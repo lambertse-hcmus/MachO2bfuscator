@@ -3,7 +3,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "MachO2fuscator/mach_reader.h"
+#include "MachO2bfuscator/mach_reader.h"
 
 // ── Minimal test harness ─────────────────────────────────────────
 static int g_passed = 0;
@@ -36,7 +36,7 @@ static int g_failed = 0;
   } while (0)
 
 const std::string obcCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/"
+    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
     "testckey_objc";
 // ── Test: loading a non-existent file throws ─────────────────────
 TEST(test_load_nonexistent_throws) {

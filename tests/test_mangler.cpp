@@ -1,8 +1,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "MachO2fuscator/mangler.h"
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/mangler.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 static int g_passed = 0, g_failed = 0;
 #define RUN(name)                                \
@@ -31,7 +31,7 @@ static int g_passed = 0, g_failed = 0;
   } while (0)
 
 const std::string objCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/"
+    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
     "testckey_objc";
 // ── CaesarMangler unit tests ──────────────────────────────────────
 

@@ -1,11 +1,11 @@
-#include "MachO2fuscator/objc_extractor.h"
+#include "MachO2bfuscator/objc_extractor.h"
 
 #include <cassert>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
 
-#include "MachO2fuscator/objc_structs.h"
+#include "MachO2bfuscator/objc_structs.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  Internal implementation

@@ -1,8 +1,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "MachO2fuscator/mach_reader.h"
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/mach_reader.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 static int g_passed = 0, g_failed = 0;
 #define RUN(name)                                \
@@ -30,7 +30,7 @@ static int g_passed = 0, g_failed = 0;
                                " vs " + std::to_string(b));             \
   } while (0)
 
-const std::string objCPath = "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/testckey_objc";
+const std::string objCPath = "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/testckey_objc";
 // ── Unit tests (no binary needed) ────────────────────────────────
 
 void test_setter_name_generation() {

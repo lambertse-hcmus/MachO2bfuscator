@@ -1,4 +1,4 @@
-#include "MachO2fuscator/mach_reader.h"
+#include "MachO2bfuscator/mach_reader.h"
 
 #include <cassert>
 #include <cstring>
@@ -17,7 +17,7 @@
 #include <mach-o/swap.h>  // OSSwapInt32 etc.
 
 //
-#include "MachO2fuscator/objc_structs.h"
+#include "MachO2bfuscator/objc_structs.h"
 
 #ifndef LC_DYLD_EXPORTS_TRIE
 #define LC_DYLD_EXPORTS_TRIE 0x80000033u

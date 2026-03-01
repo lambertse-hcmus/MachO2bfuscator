@@ -1,4 +1,4 @@
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 #include <iostream>
 #include <stdexcept>

@@ -1,4 +1,4 @@
-#include "MachO2fuscator/obfuscator.h"
+#include "MachO2bfuscator/obfuscator.h"
 
 #include <fstream>
 #include <iostream>

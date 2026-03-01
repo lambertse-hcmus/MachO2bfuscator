@@ -2,8 +2,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "MachO2fuscator/mach_reader.h"
-#include "MachO2fuscator/objc_extractor.h"
+#include "MachO2bfuscator/mach_reader.h"
+#include "MachO2bfuscator/objc_extractor.h"
 
 static void printSlice(const MachOSlice& slice, size_t index) {
   std::cout << "\n══ Slice #" << index << " ("

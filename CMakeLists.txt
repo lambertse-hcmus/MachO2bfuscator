@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(MachO2fuscation VERSION 1.0.0 LANGUAGES CXX)
+project(MachO2bfuscator VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,6 +12,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 
+set(ENABLE_TESTING ON CACHE BOOL "Enable testing")
 # === Main library (all phases will add sources here) ===
 set(PROJECT_NAME_LIB ${PROJECT_NAME}_lib)
 set(PROJECT_NAME_CLI ${PROJECT_NAME})
@@ -34,34 +35,6 @@ add_executable(${PROJECT_NAME_CLI}
 )
 target_link_libraries(${PROJECT_NAME_CLI} PRIVATE ${PROJECT_NAME_LIB})
 
-# === Tests ===
-enable_testing()
-add_executable(test_mach_reader
-    tests/test_mach_reader.cpp
-)
-target_link_libraries(test_mach_reader PRIVATE ${PROJECT_NAME_LIB})
-
-add_executable(test_objc_extractor
-    tests/test_objc_extractor.cpp
-)
-target_link_libraries(test_objc_extractor PRIVATE ${PROJECT_NAME_LIB})
-
-add_executable(test_symbol_sets
-    tests/test_symbol_sets.cpp
-)
-target_link_libraries(test_symbol_sets PRIVATE ${PROJECT_NAME_LIB})
-
-add_executable(test_mangler
-    tests/test_mangler.cpp
-)
-target_link_libraries(test_mangler PRIVATE ${PROJECT_NAME_LIB})
-
-add_executable(test_binary_patcher
-    tests/test_binary_patcher.cpp
-)
-target_link_libraries(test_binary_patcher PRIVATE ${PROJECT_NAME_LIB})
-
-add_executable(test_obfuscator
-    tests/test_obfuscator.cpp
-)
-target_link_libraries(test_obfuscator PRIVATE ${PROJECT_NAME_LIB})
+if(ENABLE_TESTING)
+    add_subdirectory(tests)
+endif()

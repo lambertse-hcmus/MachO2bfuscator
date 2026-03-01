@@ -1,5 +1,5 @@
-#include "MachO2fuscator/mangler.h"
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/mangler.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 #include <cctype>
 #include <random>

@@ -5,12 +5,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "MachO2fuscator/binary_patcher.h"
-#include "MachO2fuscator/mach_reader.h"
-#include "MachO2fuscator/mangler.h"
-#include "MachO2fuscator/mangling_map.h"
-#include "MachO2fuscator/objc_extractor.h"
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/binary_patcher.h"
+#include "MachO2bfuscator/mach_reader.h"
+#include "MachO2bfuscator/mangler.h"
+#include "MachO2bfuscator/mangling_map.h"
+#include "MachO2bfuscator/objc_extractor.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  ObfuscatorConfig

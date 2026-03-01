@@ -1,4 +1,4 @@
-#include "MachO2fuscator/binary_patcher.h"
+#include "MachO2bfuscator/binary_patcher.h"
 
 #include <algorithm>
 #include <cstring>

@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <string>
 
-#include "MachO2fuscator/mangling_map.h"
-#include "MachO2fuscator/symbol_sets.h"
+#include "MachO2bfuscator/mangling_map.h"
+#include "MachO2bfuscator/symbol_sets.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  IMangler — interface

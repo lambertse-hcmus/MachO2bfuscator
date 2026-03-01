@@ -2,8 +2,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "MachO2fuscator/mach_reader.h"
-#include "MachO2fuscator/objc_extractor.h"
+#include "MachO2bfuscator/mach_reader.h"
+#include "MachO2bfuscator/objc_extractor.h"
 
 static int g_passed = 0, g_failed = 0;
 #define RUN(name)                                \
@@ -69,7 +69,7 @@ void test_libobjc_selectors() {
   ASSERT(sels.count("viewDidLoad") == 0);  // not a libobjc selector
 }
 std::string objCPath =
-    "/Users/tri.le/src/opensource/lambertse/MachO2fuscation/assets/"
+    "/Users/tri.le/src/opensource/lambertse/MachO2bfuscator/assets/"
     "testckey_objc";
 // ── Integration test: extract from real binary ────────────────────
 void test_extract_real_binary() {
