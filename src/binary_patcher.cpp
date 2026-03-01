@@ -4,8 +4,8 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
+#include "logger.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  MethTypeObfuscator

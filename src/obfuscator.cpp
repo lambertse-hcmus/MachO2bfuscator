@@ -1,8 +1,9 @@
 #include "MachO2bfuscator/obfuscator.h"
 
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
+
+#include "logger.h"
 
 // ── ObfuscatorPipeline ────────────────────────────────────────────
 
@@ -11,13 +12,6 @@ ObfuscatorPipeline::ObfuscatorPipeline(ObfuscatorConfig config)
   // Default mangler: CaesarMangler with key=13
   if (!config_.mangler) {
     config_.mangler = std::make_shared<CaesarMangler>(13);
-  }
-}
-
-// ── log ───────────────────────────────────────────────────────────
-void ObfuscatorPipeline::log(const std::string& msg) const {
-  if (config_.verbose) {
-    std::cout << "[obfuscator] " << msg << "\n";
   }
 }
 
@@ -80,19 +74,17 @@ ManglingMap ObfuscatorPipeline::buildManglingMap(
 
   symbolsOut = SymbolsCollector::collect(cfg);
 
-  log("whitelist: " + std::to_string(symbolsOut.whitelist.selectors.size()) +
-      " selectors, " + std::to_string(symbolsOut.whitelist.classes.size()) +
-      " classes");
-  log("blacklist: " + std::to_string(symbolsOut.blacklist.selectors.size()) +
-      " selectors, " + std::to_string(symbolsOut.blacklist.classes.size()) +
-      " classes");
+  LOGGER_INFO("whitelist: {} selectors, {} classes",
+              symbolsOut.whitelist.selectors.size(),
+              symbolsOut.whitelist.classes.size());
+  LOGGER_INFO("blacklist: selectors, {} classes",
+              symbolsOut.blacklist.selectors.size(),
+              symbolsOut.blacklist.classes.size());
 
   // ── Phase 5 ───────────────────────────────────────────────────
   ManglingMap map = config_.mangler->mangle(symbolsOut);
-
-  log("mangled: " + std::to_string(map.selectors.size()) + " selectors, " +
-      std::to_string(map.classNames.size()) + " classes");
-
+  LOGGER_INFO("mangled: {} selectors, {} classes", map.selectors.size(),
+              map.classNames.size());
   return map;
 }
 
@@ -111,13 +103,13 @@ ObfuscatorStats ObfuscatorPipeline::run() {
   ObfuscatorStats stats;
 
   if (config_.images.empty()) {
-    log("No images to obfuscate.");
+    LOGGER_INFO("No images to obfuscate.");
     return stats;
   }
 
   // ── Phases 4+5: build the mangling map once for all images ────
   // Mirrors Swift: symbols are built once, then applied to each image
-  log("Collecting symbols...");
+  LOGGER_INFO("Collecting symbols...");
   ObfuscationSymbols symbols;
   ManglingMap map = buildManglingMap(symbols);
 
@@ -133,20 +125,20 @@ ObfuscatorStats ObfuscatorPipeline::run() {
   stats.mangledClasses = static_cast<uint32_t>(map.classNames.size());
 
   if (map.empty()) {
-    log("Warning: mangling map is empty — nothing to patch.");
+    LOGGER_INFO("Warning: mangling map is empty — nothing to patch.");
     return stats;
   }
 
   // ── Phase 6: patch each image ─────────────────────────────────
   // Mirrors Swift: for obfuscableImage in paths.obfuscableImages { ... }
   for (const auto& img : config_.images) {
-    log("Obfuscating: " + img.srcPath);
+    LOGGER_INFO("Obfuscating: {}", img.srcPath);
 
     try {
       if (config_.dryRun) {
         // Dry run: analyse only, do not write
         // Mirrors Swift: options.dryrun
-        log("  [dry run] skipping write to " + img.dstPath);
+        LOGGER_INFO("  [dry run] skipping write to {}", img.dstPath);
         ++stats.imagesProcessed;
         continue;
       }
@@ -166,7 +158,7 @@ ObfuscatorStats ObfuscatorPipeline::run() {
         // Mirrors Swift: image.eraseMethTypeSection()
         if (config_.eraseMethType) {
           eraseSectionIfPresent(slice, "__TEXT", "__objc_methtype");
-          log("  erased __objc_methtype");
+          LOGGER_INFO("  erased __objc_methtype");
         }
 
         // ── Erase SYMTAB ───────────────────────────────────
@@ -180,11 +172,9 @@ ObfuscatorStats ObfuscatorPipeline::run() {
       stats.classPatches += patchResult.classPatches;
       stats.methTypePatches += patchResult.methTypePatches;
 
-      log("  patched: " + std::to_string(patchResult.selectorPatches) +
-          " selectors, " + std::to_string(patchResult.classPatches) +
-          " classes, " + std::to_string(patchResult.methTypePatches) +
-          " methtypes");
-
+      LOGGER_INFO("  patched: {} selectors, {} classes, {} methtypes",
+                  patchResult.selectorPatches, patchResult.classPatches,
+                  patchResult.methTypePatches);
       // Write patched rawData to dstPath
       std::ofstream out(img.dstPath, std::ios::binary | std::ios::trunc);
       if (!out) {
@@ -197,16 +187,16 @@ ObfuscatorStats ObfuscatorPipeline::run() {
       }
 
       ++stats.imagesProcessed;
-      log("  written to: " + img.dstPath);
+      LOGGER_INFO("  written to: {}", img.dstPath);
 
     } catch (const std::exception& e) {
-      std::cerr << "Warning: failed to obfuscate '" << img.srcPath
-                << "': " << e.what() << "\n";
+      LOGGER_WARN("Warning: Failed to obfuscate '{}': {}", img.srcPath,
+                  e.what());
     }
   }
 
-  log("Done. " + std::to_string(stats.imagesProcessed) +
-      " image(s) obfuscated.");
+  LOGGER_INFO("Done. {} image(s) obfuscated",
+              std::to_string(stats.imagesProcessed));
 
   return stats;
 }

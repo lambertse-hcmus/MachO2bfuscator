@@ -47,7 +47,6 @@ static void forEachString(const MachOSlice& slice, const MachSection& sec,
 
 TEST(ObfuscatorPipeline, EmptyConfigReturnsZeroStats) {
   ObfuscatorConfig cfg;
-  cfg.verbose = false;
   ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
   EXPECT_EQ(stats.imagesProcessed, 0u);
@@ -93,7 +92,6 @@ TEST_F(ObfuscatorIntegration, DryRunDoesNotWriteFile) {
   ObfuscatorConfig cfg;
   cfg.images.push_back({kBinaryPath, dstPath});
   cfg.dryRun = true;
-  cfg.verbose = false;
 
   ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
@@ -111,7 +109,6 @@ TEST_F(ObfuscatorIntegration, BasicPipelineProducesObfuscatedBinary) {
   ObfuscatorConfig cfg;
   cfg.images.push_back({kBinaryPath, dstPath});
   cfg.mangler = std::make_shared<CaesarMangler>(13);
-  cfg.verbose = false;
 
   ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
 
@@ -145,7 +142,6 @@ TEST_F(ObfuscatorIntegration, EraseMethTypeZerosOutSection) {
   cfg.images.push_back({kBinaryPath, dstPath});
   cfg.mangler = std::make_shared<CaesarMangler>(13);
   cfg.eraseMethType = true;
-  cfg.verbose = false;
 
   EXPECT_EQ(ObfuscatorPipeline(cfg).run().imagesProcessed, 1u);
 
@@ -263,7 +259,6 @@ TEST_F(ObfuscatorIntegration,
   ObfuscatorConfig cfg;
   cfg.images.push_back({kBinaryPath, dstPath});
   cfg.mangler = std::make_shared<RandomMangler>(kSeed);
-  cfg.verbose = false;
 
   ObfuscatorStats stats = ObfuscatorPipeline(cfg).run();
   ASSERT_EQ(stats.imagesProcessed, 1u);

@@ -2,10 +2,10 @@
 
 #include <cassert>
 #include <cstring>
-#include <iostream>
 #include <stdexcept>
 
 #include "MachO2bfuscator/objc_structs.h"
+#include "logger.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  Internal implementation
@@ -384,8 +384,6 @@ ObjcMetadata extractMetadataImpl(const MachOSlice& slice) {
               slice, classFileOff, preferredLoadAddr);
           meta.classes.push_back(std::move(cls));
         } catch (const std::exception& e) {
-          std::cout << "Warning: failed to read class at file offset 0x"
-                    << std::hex << classFileOff << ": " << e.what() << "\n";
         }
       });
 
@@ -425,8 +423,8 @@ ObjcMetadata extractMetadataImpl(const MachOSlice& slice) {
 
           meta.categories.push_back(std::move(cat));
         } catch (const std::exception&) {
-          std::cout << "Warning: failed to read category at file offset 0x"
-                    << std::hex << catFileOff << "\n";
+          LOGGER_WARN("Warning: Failed to read category at file offset 0x{}",
+                      std::hex, catFileOff);
         }
       });
 
@@ -456,8 +454,8 @@ ObjcMetadata extractMetadataImpl(const MachOSlice& slice) {
 
           meta.protocols.push_back(std::move(proto));
         } catch (const std::exception&) {
-          std::cout << "Warning: failed to read protocol at file offset 0x"
-                    << std::hex << protoFileOff << "\n";
+          LOGGER_WARN("Warning: Failed to read protocol at file offset 0x{}",
+                      std::hex, protoFileOff);
         }
       });
 

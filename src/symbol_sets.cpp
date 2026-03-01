@@ -1,6 +1,6 @@
 #include "MachO2bfuscator/symbol_sets.h"
+#include "logger.h"
 
-#include <iostream>
 #include <stdexcept>
 
 // ── ObjCSymbolSets::mergeFrom ─────────────────────────────────────
@@ -87,8 +87,8 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
     try {
       userSymbols.mergeFrom(extractFromBinary(path));
     } catch (const std::exception& e) {
-      std::cerr << "Warning: failed to extract from obfuscable '" << path
-                << "': " << e.what() << "\n";
+      LOGGER_WARN("Warning: failed to extract from obfuscable '{}': {}", path,
+                  e.what());
     }
   }
 
@@ -98,8 +98,8 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
     try {
       systemSymbols.mergeFrom(extractFromBinary(path));
     } catch (const std::exception& e) {
-      std::cerr << "Warning: failed to extract from dependency '" << path
-                << "': " << e.what() << "\n";
+      LOGGER_WARN("Warning: failed to extract from dependency '{}': {}", path,
+                  e.what());
     }
   }
 
@@ -159,4 +159,4 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
 
   return ObfuscationSymbols{std::move(whitelist), std::move(blacklist),
                             std::move(removedList)};
-} 
+}

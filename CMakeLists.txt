@@ -25,6 +25,7 @@ add_library(${PROJECT_NAME_LIB}
     src/mangler.cpp
     src/binary_patcher.cpp
     src/obfuscator.cpp
+    src/logger.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)

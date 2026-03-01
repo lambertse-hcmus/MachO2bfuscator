@@ -67,9 +67,6 @@ struct ObfuscatorConfig {
   // If true, perform all analysis but do not write any output files.
   // Mirrors Swift: options.dryrun
   bool dryRun = false;
-
-  // ── Verbosity ─────────────────────────────────────────────────
-  bool verbose = false;
 };
 
 // ═══════════════════════════════════════════════════════════════

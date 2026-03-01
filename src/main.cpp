@@ -1,40 +1,32 @@
 #include <cstdio>
 #include <iomanip>
-#include <iostream>
 
 #include "MachO2bfuscator/mach_reader.h"
 #include "MachO2bfuscator/objc_extractor.h"
+#include "logger.h"
 
 static void printSlice(const MachOSlice& slice, size_t index) {
-  std::cout << "\n══ Slice #" << index << " ("
-            << (slice.is64bit ? "64-bit" : "32-bit") << ")"
-            << "  cpu=" << slice.cpu.type << "/" << slice.cpu.subtype
-            << " ══\n";
-
+  LOGGER_INFO("=== Slice #{} ({}-bit) cpu={}/{} ===", index,
+              slice.is64bit ? 64 : 32, slice.cpu.type, slice.cpu.subtype);
   // Print all segments and their sections
   for (const auto& seg : slice.segments) {
-    std::cout << "  SEGMENT  " << std::left << std::setw(18) << seg.name
-              << "  fileOff=0x" << std::hex << seg.fileOff << "  vmAddr=0x"
-              << seg.vmAddr << "  size=0x" << seg.fileSize << std::dec << "\n";
+    LOGGER_INFO("  SEGMENT  {}  fileOff=0x{:X}  vmAddr=0x{:X}  size=0x{:X}",
+                seg.name, seg.fileOff, seg.vmAddr, seg.fileSize);
 
     for (const auto& sec : seg.sections) {
-      std::cout << "    section  " << std::left << std::setw(24)
-                << sec.sectionName << "  fileOff=0x" << std::hex
-                << sec.fileOffset << "  vmAddr=0x" << sec.vmAddr << "  size=0x"
-                << sec.size << std::dec << "\n";
+      LOGGER_INFO("    section  {}  fileOff=0x{:X}  vmAddr=0x{:X}  size=0x{:X}",
+                  sec.sectionName, sec.fileOffset, sec.vmAddr, sec.size);
     }
   }
 
   // Print key ObjC sections using the named accessors
-  std::cout << "\n  ── Key ObjC sections ──\n";
+  LOGGER_INFO("  === Key ObjC sections ===");
   auto printNamedSec = [&](const char* label, const MachSection* sec) {
     if (sec) {
-      std::cout << "  " << std::left << std::setw(28) << label << "fileOff=0x"
-                << std::hex << sec->fileOffset << "  size=0x" << sec->size
-                << std::dec << "\n";
+      LOGGER_INFO("  {}  fileOff=0x{:X}  size=0x{:X}", label, sec->fileOffset,
+                  sec->size);
     } else {
-      std::cout << "  " << std::left << std::setw(28) << label
-                << "(not present)\n";
+      LOGGER_INFO("  {}  (not present)", label);
     }
   };
   printNamedSec("__objc_classname", slice.objcClassNameSection());
@@ -47,121 +39,120 @@ static void printSlice(const MachOSlice& slice, size_t index) {
 
   // Symtab
   if (slice.symtab) {
-    std::cout << "\n  SYMTAB  symOff=0x" << std::hex << slice.symtab->symOff
-              << "  nSyms=" << std::dec << slice.symtab->nSyms
-              << "  strTable=[0x" << std::hex << slice.symtab->strTable.offset
-              << ", size=0x" << slice.symtab->strTable.size << "]\n"
-              << std::dec;
+    LOGGER_INFO(
+        "  SYMTAB symOff=0x{:X}  nSyms={}  strTable=[0x{:X}, size=0x{:X}]",
+        slice.symtab->symOff, slice.symtab->nSyms,
+        slice.symtab->strTable.offset, slice.symtab->strTable.size);
   }
 
   // DyldInfo
   if (slice.dyldInfo) {
-    std::cout << "\n  DYLD_INFO\n";
-    std::cout << "    bind       [0x" << std::hex << slice.dyldInfo->bind.offset
-              << ", size=0x" << slice.dyldInfo->bind.size << "]\n";
-    std::cout << "    weakBind   [0x" << slice.dyldInfo->weakBind.offset
-              << ", size=0x" << slice.dyldInfo->weakBind.size << "]\n";
-    std::cout << "    lazyBind   [0x" << slice.dyldInfo->lazyBind.offset
-              << ", size=0x" << slice.dyldInfo->lazyBind.size << "]\n";
-    std::cout << "    export     [0x" << slice.dyldInfo->exportRange.offset
-              << ", size=0x" << slice.dyldInfo->exportRange.size << "]\n";
-    std::cout << std::dec;
+    LOGGER_INFO("  DYLD_INFO");
+    LOGGER_INFO("    bind       [0x{:X}, size=0x{:X}]",
+                slice.dyldInfo->bind.offset, slice.dyldInfo->bind.size);
+    LOGGER_INFO("    weakBind   [0x{:X}, size=0x{:X}]",
+                slice.dyldInfo->weakBind.offset, slice.dyldInfo->weakBind.size);
+    LOGGER_INFO("    lazyBind   [0x{:X}, size=0x{:X}]",
+                slice.dyldInfo->lazyBind.offset, slice.dyldInfo->lazyBind.size);
+    LOGGER_INFO("    export     [0x{:X}, size=0x{:X}]",
+                slice.dyldInfo->exportRange.offset,
+                slice.dyldInfo->exportRange.size);
   }
 
   // Dylibs
   if (!slice.dylibs.empty()) {
-    std::cout << "\n  Dependent dylibs:\n";
+    LOGGER_INFO("  Dependent dylibs:");
     for (const auto& d : slice.dylibs) {
-      std::cout << "    " << d << "\n";
+      LOGGER_INFO("    {}", d);
     }
   }
 
   // Rpaths
   if (!slice.rpaths.empty()) {
-    std::cout << "\n  RPaths:\n";
+    LOGGER_INFO("  RPaths:");
     for (const auto& r : slice.rpaths) {
-      std::cout << "    " << r << "\n";
+      LOGGER_INFO("    {}", r);
     }
   }
 }
 
 static void printMetadata(const MachOSlice& slice, size_t sliceIdx) {
-  std::cout << "\n── ObjC Metadata (Slice #" << sliceIdx << ") ──\n";
-
+  LOGGER_INFO("--- ObjC Metadata (Slice #{}) ---", sliceIdx);
   ObjcMetadata meta = ObjcExtractor::extractMetadata(slice);
 
   // ── Classes ───────────────────────────────────────────────────
-  std::cout << "\nClasses (" << meta.classes.size() << "):\n";
+  LOGGER_INFO("Classes ({}):", meta.classes.size());
   for (const auto& cls : meta.classes) {
-    std::cout << "  class " << cls.name.value << "  [fileOff=0x" << std::hex
-              << cls.name.fileOffset << ", len=" << std::dec << cls.name.length
-              << "]\n";
+    LOGGER_INFO(
+        "  class {}  [fileOff=0x{:X}, len={}]  ivars={}  methods={}  "
+        "properties={}",
+        cls.name.value, cls.name.fileOffset, cls.name.length, cls.ivars.size(),
+        cls.methods.size(), cls.properties.size());
     for (const auto& m : cls.methods) {
-      std::cout << "    -" << m.name.value << "  " << m.methType.value << "\n";
+      LOGGER_INFO("    -{}  {}", m.name.value, m.methType.value);
     }
     for (const auto& iv : cls.ivars) {
-      std::cout << "    ivar " << iv.name.value << "  " << iv.type.value
-                << "\n";
+      LOGGER_INFO("    ivar {}  {}", iv.name.value, iv.type.value);
     }
     for (const auto& p : cls.properties) {
-      std::cout << "    prop " << p.name.value << "  " << p.attributes.value
-                << "\n";
+      LOGGER_INFO("    prop {}  {}", p.name.value, p.attributes.value);
     }
   }
 
   // ── Categories ────────────────────────────────────────────────
-  std::cout << "\nCategories (" << meta.categories.size() << "):\n";
+  LOGGER_INFO("Categories ({}):", meta.categories.size());
   for (const auto& cat : meta.categories) {
     std::string clsName = cat.cls ? cat.cls->name.value : "(external)";
-    std::cout << "  " << clsName << "+" << cat.name.value << "\n";
+    LOGGER_INFO("  {}+{}  [fileOff=0x{:X}, len={}]  methods={}  properties={}",
+                clsName, cat.name.value, cat.name.fileOffset, cat.name.length,
+                cat.methods.size(), cat.properties.size());
     for (const auto& m : cat.methods) {
-      std::cout << "    -" << m.name.value << "  " << m.methType.value << "\n";
+      LOGGER_INFO("    -{}  {}", m.name.value, m.methType.value);
     }
   }
 
   // ── Protocols ─────────────────────────────────────────────────
-  std::cout << "\nProtocols (" << meta.protocols.size() << "):\n";
+  LOGGER_INFO("Protocols ({}):", meta.protocols.size());
   for (const auto& proto : meta.protocols) {
-    std::cout << "  @protocol " << proto.name.value << "\n";
+    LOGGER_INFO("  @protocol {}", proto.name.value);
     for (const auto& m : proto.methods) {
-      std::cout << "    -" << m.name.value << "\n";
+      LOGGER_INFO("    -{}", m.name.value);
     }
   }
 
   // ── Selectors ─────────────────────────────────────────────────
   auto selectors = ObjcExtractor::extractSelectors(slice);
-  std::cout << "\nSelectors (" << selectors.size() << "):\n";
+  LOGGER_INFO("Selectors ({}):", selectors.size());
   for (const auto& sel : selectors) {
-    std::cout << "  @selector(" << sel.value << ")"
-              << "  [fileOff=0x" << std::hex << sel.fileOffset << "]\n";
+    LOGGER_INFO("  @selector({})  [fileOff=0x{:X}]", sel.value, sel.fileOffset);
   }
-  std::cout << std::dec;
 
   // ── Obfuscatable class names ───────────────────────────────────
   auto classNames = ObjcExtractor::collectClassNames(slice, meta);
-  std::cout << "\nObfuscatable class names (" << classNames.size() << "):\n";
+  LOGGER_INFO("Obfuscatable class names ({}):", classNames.size());
   for (const auto& cn : classNames) {
-    std::cout << "  " << cn.value << "  [fileOff=0x" << std::hex
-              << cn.fileOffset << ", len=" << std::dec << cn.length << "]\n";
+    LOGGER_INFO("  {}  [fileOff=0x{:X}, len={}]", cn.value, cn.fileOffset,
+                cn.length);
   }
 }
 
 int main(int argc, char* argv[]) {
+  logger::init(LOG_LEVEL_INFO);
   if (argc < 2) {
-    std::cerr << "Usage: class_obfuscator <path-to-macho-binary>\n";
+    LOGGER_INFO("Usage: {} <path-to-macho-binary>", argv[0]);
     return 1;
   }
 
   try {
     MachOImage image = loadMachOImage(argv[1]);
-    std::cout << "Slices found: " << image.slices.size() << "\n";
+    LOGGER_INFO("Slices found: {}", image.slices.size());
 
     for (size_t i = 0; i < image.slices.size(); ++i) {
       printSlice(image.slices[i], i);
       printMetadata(image.slices[i], i);
     }
   } catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << "\n";
+    LOGGER_ERROR("Failed to load MachO image '{}': {}", argv[1], e.what());
     return 1;
   }
   return 0;
