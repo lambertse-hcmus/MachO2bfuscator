@@ -1,8 +1,8 @@
 #include "cli_parser.h"
 
 #include <cxxopts.hpp>
-#include <memory>
 #include <iostream>
+#include <memory>
 
 #include "../logger.h"
 #include "cli_parser.h"
@@ -20,8 +20,8 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
     options.add_options()
         // ── Mangler ──────────────────────────────────────────────────
         ("m,mangler",
-            "Mangler to use: 'caesar' or 'random' (default: random)",
-            cxxopts::value<std::string>()->default_value("random"))
+            "Mangler: 'caesar', 'random', or 'realwords' (default: realwords)",
+            cxxopts::value<std::string>()->default_value("realwords"))
 
         ("caesar-key",
             "Shift key for CaesarMangler, 1–25 (default: 13)",
@@ -95,9 +95,11 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
   }
 
   const std::string manglerType = result["mangler"].as<std::string>();
-  if (manglerType != "caesar" && manglerType != "random") {
-    LOGGER_ERROR("--mangler must be 'caesar' or 'random', got '{}'",
-                 manglerType);
+  if (manglerType != "caesar" && manglerType != "random" &&
+      manglerType != "realwords") {
+    std::cerr
+        << "[error] --mangler must be 'caesar', 'random', or 'realwords', got '"
+        << manglerType << "'\n";
     std::exit(1);
   }
 

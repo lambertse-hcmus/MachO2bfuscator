@@ -24,14 +24,19 @@ static void printStats(const ObfuscatorStats& s) {
 
 // ── main ─────────────────────────────────────────────────────────────
 int main(int argc, char* argv[]) {
+  logger::init();
   ObfuscatorConfig cfg = parseArgs(argc, argv);
 
   if (cfg.verbose) {
     LOGGER_INFO("Mangler type: {}", cfg.manglerType);
     if (cfg.manglerType == "caesar") {
       LOGGER_INFO("Caesar key: {}", static_cast<int>(cfg.caesarKey));
-    } else {
+    } else if (cfg.manglerType == "random") {
       LOGGER_INFO("Random seed: {}", cfg.randomSeed);
+    } else if (cfg.manglerType == "realwords") {
+      LOGGER_INFO("Using real words mangler");
+    } else {
+      LOGGER_INFO("Hold on, unknown mangler type: {}", cfg.manglerType);
     }
     LOGGER_INFO("[*] Images : {}", cfg.images.size());
     if (cfg.dryRun) LOGGER_INFO("[*] Dry-run mode — no files will be written");

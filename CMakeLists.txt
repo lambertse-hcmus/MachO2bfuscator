@@ -22,11 +22,13 @@ add_library(${PROJECT_NAME_LIB}
     src/objc_types.cpp
     src/objc_extractor.cpp
     src/symbol_sets.cpp
-    src/mangler.cpp
     src/binary_patcher.cpp
     src/obfuscator.cpp
     src/logger.cpp
     src/cli/cli_parser.cpp
+    src/mangler/caesar_mangler.cpp
+    src/mangler/random_mangler.cpp
+    src/mangler/real_word_mangler.cpp
 )
 
 target_include_directories(${PROJECT_NAME_LIB} PUBLIC include)

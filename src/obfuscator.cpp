@@ -1,20 +1,19 @@
 #include "MachO2bfuscator/obfuscator.h"
-#include "MachO2bfuscator/binary_patcher.h"
-#include "MachO2bfuscator/mangler.h"
 
 #include <fstream>
+#include <random>
 #include <stdexcept>
 
+#include "MachO2bfuscator/binary_patcher.h"
+#include "MachO2bfuscator/mangler.h"
 #include "logger.h"
-#include <random>
 
 // ── ObfuscatorPipeline ────────────────────────────────────────────
 
 ObfuscatorPipeline::ObfuscatorPipeline(ObfuscatorConfig config)
     : config_(std::move(config)) {
-  // Default mangler: CaesarMangler with key=13
   if (!config_.mangler) {
-    config_.mangler = std::make_shared<CaesarMangler>(13);
+    config_.mangler = std::make_shared<RealWordsMangler>();
   }
 }
 
@@ -40,11 +39,15 @@ void ObfuscatorPipeline::ensureMangler() {
 
   if (config_.manglerType == "caesar") {
     config_.mangler = std::make_shared<CaesarMangler>(config_.caesarKey);
-  } else {
+  } else if (config_.manglerType == "random") {
     // "random" (default)
     uint32_t seed = config_.randomSeed;
     if (seed == 0) seed = std::random_device{}();
     config_.mangler = std::make_shared<RandomMangler>(seed);
+  } else if (config_.manglerType == "realwords") {
+    config_.mangler = std::make_shared<RealWordsMangler>();
+  } else {
+    throw std::runtime_error("Unknown mangler type: " + config_.manglerType);
   }
 }
 
@@ -93,9 +96,23 @@ ManglingMap ObfuscatorPipeline::buildManglingMap(
   LOGGER_INFO("whitelist: {} selectors, {} classes",
               symbolsOut.whitelist.selectors.size(),
               symbolsOut.whitelist.classes.size());
-  LOGGER_INFO("blacklist: selectors, {} classes",
+  LOGGER_INFO("blacklist: {} selectors, {} classes",
               symbolsOut.blacklist.selectors.size(),
               symbolsOut.blacklist.classes.size());
+  if (config_.verbose && config_.dryRun) {
+    for (const auto& sel : symbolsOut.whitelist.selectors) {
+      LOGGER_INFO("  whitelist selector: {}", sel);
+    }
+    for (const auto& cls : symbolsOut.whitelist.classes) {
+      LOGGER_INFO("  whitelist class: {}", cls);
+    }
+    for (const auto& sel : symbolsOut.blacklist.selectors) {
+      LOGGER_INFO("  blacklist selector: {}", sel);
+    }
+    for (const auto& cls : symbolsOut.blacklist.classes) {
+      LOGGER_INFO("  blacklist class: {}", cls);
+    }
+  }
 
   // ── Phase 5 ───────────────────────────────────────────────────
   ManglingMap map = config_.mangler->mangle(symbolsOut);

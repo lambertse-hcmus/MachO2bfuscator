@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+
 #include "logger.h"
 
 // ═══════════════════════════════════════════════════════════════
@@ -127,6 +128,7 @@ uint32_t BinaryPatcher::patchMethTypes(MachOSlice& slice,
       std::string obfuscated = obfuscator.obfuscate(original);
 
       if (obfuscated != original) {
+        LOGGER_INFO("map methType: '{}' → '{}'", original, obfuscated);
         replaceStringInPlace(slice, cursor, obfuscated, origLen);
         ++count;
       }
@@ -219,6 +221,14 @@ uint32_t BinaryPatcher::patchClassNames(MachOSlice& slice,
 // Mirrors Swift comment: "Obfuscate from more specific to less specific"
 PatchResult BinaryPatcher::patch(MachOSlice& slice, const ManglingMap& map) {
   PatchResult result;
+  {
+    for (const auto& [orig, mangled] : map.selectors) {
+      LOGGER_INFO("map selector: '{}' → '{}'", orig, mangled);
+    }
+    for (const auto& [orig, mangled] : map.classNames) {
+      LOGGER_INFO("map class: '{}' → '{}'", orig, mangled);
+    }
+  }
   result.methTypePatches = patchMethTypes(slice, map);
   result.selectorPatches = patchSelectors(slice, map);
   result.classPatches = patchClassNames(slice, map);

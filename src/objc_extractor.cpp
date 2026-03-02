@@ -478,6 +478,26 @@ ObjcMetadata ObjcExtractor::extractMetadata(const MachOSlice& slice) {
   }
 }
 
+static bool isPropertyAttributeOrIvar(const std::string& s) {
+  if (s.empty()) return false;
+
+  // Ivar backing store names always start with '_'
+  // e.g. "_name", "_age", "_window"
+  if (s[0] == '_') return true;
+
+  // Property attribute type encodings always start with 'T'
+  // followed by a type code character: @, q, Q, i, I, d, f, #, ^, etc.
+  // e.g. "T@\"NSString\",C,N,V_title"  "Tq,N,V_age"  "T#,R"
+  if (s[0] == 'T' && s.size() >= 2) {
+    char second = s[1];
+    // These are all valid ObjC type encoding start characters
+    static constexpr const char* kTypeChars = "@#qQiIlLsSdDfBcCvb^*:?";
+    if (strchr(kTypeChars, second) != nullptr) return true;
+  }
+
+  return false;
+}
+
 std::vector<StringInData> ObjcExtractor::extractSelectors(
     const MachOSlice& slice) {
   std::vector<StringInData> result;
@@ -494,11 +514,15 @@ std::vector<StringInData> ObjcExtractor::extractSelectors(
     size_t len = strnlen(ptr, maxLen);
 
     if (len > 0) {
-      StringInData s;
-      s.value = std::string(ptr, len);
-      s.fileOffset = cursor;
-      s.length = len;
-      result.push_back(std::move(s));
+      std::string val(ptr, len);
+
+      if (!isPropertyAttributeOrIvar(val)) {
+        StringInData s;
+        s.value = std::move(val);
+        s.fileOffset = cursor;
+        s.length = len;
+        result.push_back(std::move(s));
+      }
     }
 
     cursor += len + 1;
@@ -538,29 +562,102 @@ std::vector<StringInData> ObjcExtractor::collectClassNames(
 
   return result;
 }
-
 const std::unordered_set<std::string>& ObjcExtractor::libobjcSelectors() {
   static const std::unordered_set<std::string> selectors = {
-      "load",
-      "initialize",
-      "resolveInstanceMethod:",
-      "resolveClassMethod:",
-      ".cxx_construct",
-      ".cxx_destruct",
+      // ── Memory management (ARC / MRC) ──────────────────────────
       "retain",
       "release",
       "autorelease",
       "retainCount",
+      "dealloc",
       "alloc",
       "allocWithZone:",
-      "dealloc",
       "copy",
+      "copyWithZone:",
+      "mutableCopy",
+      "mutableCopyWithZone:",
       "new",
-      "forwardInvocation:",
       "_tryRetain",
       "_isDeallocating",
       "retainWeakReference",
       "allowsWeakReference",
+
+      // ── ObjC runtime hooks ──────────────────────────────────────
+      "load",
+      "initialize",
+      "resolveInstanceMethod:",
+      "resolveClassMethod:",
+      "forwardInvocation:",
+      "forwardingTargetForSelector:",
+      "methodSignatureForSelector:",
+      "doesNotRecognizeSelector:",
+      ".cxx_construct",
+      ".cxx_destruct",
+
+      // ── NSObject protocol (MUST NOT be renamed) ─────────────────
+      "init",
+      "class",
+      "superclass",
+      "self",
+      "isProxy",
+      "hash",
+      "description",
+      "debugDescription",
+      "isEqual:",
+      "isKindOfClass:",
+      "isMemberOfClass:",
+      "conformsToProtocol:",
+      "respondsToSelector:",
+      "performSelector:",
+      "performSelector:withObject:",
+      "performSelector:withObject:withObject:",
+      "zone",
+
+      // ── KVC / KVO (called by name by the runtime) ───────────────
+      "valueForKey:",
+      "setValue:forKey:",
+      "valueForKeyPath:",
+      "setValue:forKeyPath:",
+      "valueForUndefinedKey:",
+      "setValue:forUndefinedKey:",
+      "setNilValueForKey:",
+      "observeValueForKeyPath:ofObject:change:context:",
+      "addObserver:forKeyPath:options:context:",
+      "removeObserver:forKeyPath:",
+      "removeObserver:forKeyPath:context:",
+      "willChangeValueForKey:",
+      "didChangeValueForKey:",
+      "automaticallyNotifiesObserversForKey:",
+
+      // ── NSCoding (used by NIB/storyboard loading) ───────────────
+      "initWithCoder:",
+      "encodeWithCoder:",
+
+      // ── UIViewController lifecycle ──────────────────────────────
+      "viewDidLoad",
+      "viewWillAppear:",
+      "viewDidAppear:",
+      "viewWillDisappear:",
+      "viewDidDisappear:",
+      "viewDidLayoutSubviews",
+      "viewWillLayoutSubviews",
+      "loadView",
+
+      // ── UIApplicationDelegate lifecycle ─────────────────────────
+      "application:didFinishLaunchingWithOptions:",
+      "applicationDidBecomeActive:",
+      "applicationWillResignActive:",
+      "applicationDidEnterBackground:",
+      "applicationWillEnterForeground:",
+      "applicationWillTerminate:",
+
+      // ── UISceneDelegate lifecycle ────────────────────────────────
+      "scene:willConnectToSession:options:",
+      "sceneDidDisconnect:",
+      "sceneDidBecomeActive:",
+      "sceneWillResignActive:",
+      "sceneWillEnterForeground:",
+      "sceneDidEnterBackground:",
   };
   return selectors;
 }

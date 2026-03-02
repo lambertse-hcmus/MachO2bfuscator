@@ -24,7 +24,7 @@ using LogLevel = uint8_t;
 
 using LoggingFunctionType = std::function<void(const std::string& msg)>;
 
-void init(LogLevels allowedLevels = LOG_LEVEL_SILENCE,
+void init(LogLevels allowedLevels = LOG_LEVEL_INFO,
           LoggingFunctionType outLogFunc = nullptr,
           LoggingFunctionType errLogFunc = nullptr);
 

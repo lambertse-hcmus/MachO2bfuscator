@@ -94,8 +94,12 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
   // ── Step 2: system symbols ────────────────────────────────────
   ObjCSymbolSets systemSymbols;
   for (const auto& path : config.unobfuscablePaths) {
+    LOGGER_INFO("Extracting system symbols from dependency: '{}'", path);
     try {
-      systemSymbols.mergeFrom(extractFromBinary(path));
+      auto depSymbols = extractFromBinary(path);
+      systemSymbols.mergeFrom(depSymbols);
+      LOGGER_INFO("  extracted {} selectors and {} classes",
+                  depSymbols.selectors.size(), depSymbols.classes.size());
     } catch (const std::exception& e) {
       LOGGER_WARN("Warning: failed to extract from dependency '{}': {}", path,
                   e.what());

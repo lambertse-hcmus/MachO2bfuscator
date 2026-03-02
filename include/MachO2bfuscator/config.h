@@ -51,7 +51,7 @@ struct ObfuscatorConfig {
 
   // ── Mangler — spec (used only when mangler == nullptr) ──────────
   // "caesar" or "random"  (default: "random")
-  std::string manglerType = "random";
+  std::string manglerType = "realwords";
   // Shift key for CaesarMangler, 1–25  (default: 13)
   uint8_t caesarKey = 13;
   // Seed for RandomMangler.  0 = use std::random_device each run.
