@@ -25,6 +25,14 @@ class ObjcExtractor {
   // Returns pairs of (selectorName, fileOffset) so Phase 6 can patch them.
   static std::vector<StringInData> extractSelectors(const MachOSlice& slice);
 
+  // ── Class name extraction (direct string scan) ────────────────
+  // Reads all class/protocol name strings directly from __objc_classname.
+  // This mirrors extractSelectors() exactly — no pointer resolution.
+  // Works for BOTH app binaries AND framework dylibs from shared cache.
+  // Use this instead of / in addition to collectClassNames() for dependencies.
+  static std::vector<StringInData> extractClassNamesFromSection(
+      const MachOSlice& slice);
+
   // ── Class name collection ─────────────────────────────────────
   // Collects all obfuscatable class names from already-extracted metadata.
   //
@@ -40,4 +48,5 @@ class ObjcExtractor {
   // ── libobjc built-in selectors ────────────────────────────────
   // These must never be obfuscated (they are used by the runtime itself).
   static const std::unordered_set<std::string>& libobjcSelectors();
+  static const std::unordered_set<std::string>& libobjcClasses();
 };

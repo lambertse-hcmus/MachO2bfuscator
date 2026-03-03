@@ -1,6 +1,7 @@
 #include "MachO2bfuscator/symbol_sets.h"
-#include "logger.h"
+
 #include "MachO2bfuscator/objc_extractor.h"
+#include "logger.h"
 
 // ── ObjCSymbolSets::mergeFrom ─────────────────────────────────────
 void ObjCSymbolSets::mergeFrom(const ObjCSymbolSets& other) {
@@ -63,6 +64,18 @@ ObjCSymbolSets SymbolsCollector::extractFromBinary(const std::string& path) {
         result.classes.insert(cn.value);
       }
     }
+
+    // ── Class names (direct string scan) ─────────────────────────
+    // NEW: Also scan __TEXT __objc_classname directly — same approach
+    // as __objc_methname. This is the ONLY reliable method for framework
+    // dylibs from the shared cache because their DATA pointers are not
+    // resolvable from the file. This mirrors MachObfuscator's Swift approach.
+    auto directClassNames = ObjcExtractor::extractClassNamesFromSection(slice);
+    for (const auto& cn : directClassNames) {
+      if (!cn.value.empty()) {
+        result.classes.insert(cn.value);
+      }
+    }
   }
 
   return result;
@@ -116,6 +129,9 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
   // 3b. libobjc built-in selectors
   for (const auto& sel : ObjcExtractor::libobjcSelectors()) {
     blacklist.selectors.insert(sel);
+  }
+  for (const auto& cls : ObjcExtractor::libobjcClasses()) {
+    blacklist.classes.insert(cls);
   }
 
   // 3c. manual blacklists

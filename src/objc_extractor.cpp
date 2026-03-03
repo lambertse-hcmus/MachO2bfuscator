@@ -530,6 +530,85 @@ std::vector<StringInData> ObjcExtractor::extractSelectors(
 
   return result;
 }
+// ── isValidObjCIdentifier ─────────────────────────────────────────
+// Returns true if the string looks like a plausible ObjC class or
+// protocol name that is safe to obfuscate or blacklist.
+//
+// Rules (mirrors the ObjC compiler's class name constraints):
+//   - Must be at least 2 characters long (single-char names like 'r' are
+//     compiler internal stubs, not real user/system class names)
+//   - Must start with a letter (a-z, A-Z) or underscore
+//   - All characters must be alphanumeric, underscore, or dollar sign
+//   - Must contain NO whitespace, control characters, or non-ASCII bytes
+//
+// This filter eliminates:
+//   - Empty strings
+//   - Whitespace/padding leftovers
+//   - Non-ASCII garbage from alignment bytes
+//   - Single-character compiler stubs like 'r'
+static bool isValidObjCIdentifier(const std::string& s) {
+  if (s.size() < 2) return false;
+
+  // First character must be a letter or underscore
+  unsigned char first = static_cast<unsigned char>(s[0]);
+  if (!isalpha(first) && first != '_') return false;
+
+  // All characters must be printable ASCII: letter, digit, underscore, '$'
+  for (unsigned char c : s) {
+    if (c > 127) return false;  // non-ASCII → garbage
+    if (!isalnum(c) && c != '_' && c != '$') return false;
+  }
+
+  return true;
+}
+
+// ── extractClassNamesFromSection ──────────────────────────────────
+// Mirrors extractSelectors() exactly, but reads from __TEXT __objc_classname.
+//
+// The __objc_classname section is a plain null-terminated C-string table —
+// identical in layout to __objc_methname. Every class name and protocol name
+// defined in the binary appears here as a readable string.
+//
+// This is the ONLY reliable method for framework dylibs extracted from the
+// dyld shared cache, because their __DATA/__DATA_CONST pointer sections
+// contain VM addresses that cannot be resolved without the live cache mapping.
+//
+// For user app binaries, this produces the same set as collectClassNames()
+// but faster (no struct walking, no pointer decoding).
+std::vector<StringInData> ObjcExtractor::extractClassNamesFromSection(
+    const MachOSlice& slice) {
+  std::vector<StringInData> result;
+
+  const MachSection* sec = slice.objcClassNameSection();
+  if (!sec || sec->size == 0) return result;
+
+  uint64_t cursor = sec->fileOffset;
+  uint64_t end = sec->fileOffset + sec->size;
+
+  while (cursor < end) {
+    const char* ptr = reinterpret_cast<const char*>(slice.data + cursor);
+    size_t maxLen = static_cast<size_t>(end - cursor);
+    size_t len = strnlen(ptr, maxLen);
+
+    if (len > 0) {
+      std::string val(ptr, len);
+
+      // ── NEW: validate before accepting ──────────────────────────
+      if (!val.empty() && !StringInData{val, cursor, len}.isSwiftName() &&
+          isValidObjCIdentifier(val))  // ← add this check
+      {
+        StringInData s;
+        s.value = std::move(val);
+        s.fileOffset = cursor;
+        s.length = len;
+        result.push_back(std::move(s));
+      }
+    }
+    cursor += len + 1;
+  }
+
+  return result;
+}
 
 std::vector<StringInData> ObjcExtractor::collectClassNames(
     const MachOSlice& slice, const ObjcMetadata& metadata) {
@@ -660,4 +739,259 @@ const std::unordered_set<std::string>& ObjcExtractor::libobjcSelectors() {
       "sceneDidEnterBackground:",
   };
   return selectors;
+}
+
+const std::unordered_set<std::string>& ObjcExtractor::libobjcClasses() {
+  static const std::unordered_set<std::string> classes = {
+      // ── NSObject hierarchy ──────────────────────────────────────
+      "NSObject",
+      "NSProxy",
+
+      // ── Foundation value types ──────────────────────────────────
+      "NSString",
+      "NSMutableString",
+      "NSAttributedString",
+      "NSMutableAttributedString",
+      "NSNumber",
+      "NSValue",
+      "NSDecimalNumber",
+      "NSData",
+      "NSMutableData",
+      "NSArray",
+      "NSMutableArray",
+      "NSDictionary",
+      "NSMutableDictionary",
+      "NSSet",
+      "NSMutableSet",
+      "NSCountedSet",
+      "NSOrderedSet",
+      "NSMutableOrderedSet",
+      "NSURL",
+      "NSURLComponents",
+      "NSURLQueryItem",
+      "NSDate",
+      "NSDateComponents",
+      "NSCalendar",
+      "NSTimeZone",
+      "NSLocale",
+      "NSError",
+      "NSIndexPath",
+      "NSIndexSet",
+      "NSMutableIndexSet",
+      "NSCache",
+      "NSMapTable",
+      "NSHashTable",
+      "NSPointerArray",
+      "NSMeasurement",
+      "NSUnit",
+
+      // ── Foundation I/O / runtime ────────────────────────────────
+      "NSBundle",
+      "NSNotification",
+      "NSNotificationCenter",
+      "NSNotificationQueue",
+      "NSOperationQueue",
+      "NSOperation",
+      "NSBlockOperation",
+      "NSInvocation",
+      "NSMethodSignature",
+      "NSThread",
+      "NSRunLoop",
+      "NSTimer",
+      "NSFileManager",
+      "NSFileHandle",
+      "NSUserDefaults",
+      "NSKeyedArchiver",
+      "NSKeyedUnarchiver",
+      "NSCoder",
+      "NSPredicate",
+      "NSCompoundPredicate",
+      "NSComparisonPredicate",
+      "NSSortDescriptor",
+      "NSExpression",
+      "NSRegularExpression",
+      "NSTextCheckingResult",
+      "NSScanner",
+      "NSCharacterSet",
+      "NSMutableCharacterSet",
+
+      // ── Foundation protocols ────────────────────────────────────
+      "NSCopying",
+      "NSMutableCopying",
+      "NSCoding",
+      "NSSecureCoding",
+      "NSFastEnumeration",
+      "NSObjectProtocol",
+
+      // ── UIKit view layer ────────────────────────────────────────
+      "UIResponder",
+      "UIView",
+      "UIControl",
+      "UIScrollView",
+      "UITableView",
+      "UICollectionView",
+      "UICollectionViewCell",
+      "UITableViewCell",
+      "UITableViewHeaderFooterView",
+      "UILabel",
+      "UIButton",
+      "UIImageView",
+      "UITextField",
+      "UITextView",
+      "UISwitch",
+      "UISlider",
+      "UISegmentedControl",
+      "UIProgressView",
+      "UIActivityIndicatorView",
+      "UIPickerView",
+      "UIDatePicker",
+      "UIPageControl",
+      "UIStackView",
+      "UIVisualEffectView",
+      "UIBlurEffect",
+      "UIVibrancyEffect",
+      "UIWebView",
+      "WKWebView",
+
+      // ── UIKit view controllers ──────────────────────────────────
+      "UIViewController",
+      "UINavigationController",
+      "UITabBarController",
+      "UISplitViewController",
+      "UIPageViewController",
+      "UICollectionViewController",
+      "UITableViewController",
+      "UIAlertController",
+      "UIAlertAction",
+      "UIActivityViewController",
+      "UIDocumentPickerViewController",
+      "UIImagePickerController",
+      "UISearchController",
+      "UISearchBar",
+      "UIPopoverPresentationController",
+      "UIPresentationController",
+
+      // ── UIKit application & scene ───────────────────────────────
+      "UIApplication",
+      "UIApplicationDelegate",
+      "UIWindow",
+      "UIScreen",
+      "UIScreenMode",
+      "UIScene",
+      "UIWindowScene",
+      "UISceneSession",
+      "UISceneConfiguration",
+      "UISceneConnectionOptions",
+      "UISceneActivationConditions",
+      "UISceneDelegate",
+      "UIWindowSceneDelegate",
+      "UIOpenURLContext",
+
+      // ── UIKit appearance & layout ───────────────────────────────
+      "AppDelegate",
+      "UIColor",
+      "UIImage",
+      "UIImageAsset",
+      "UIFont",
+      "UIFontDescriptor",
+      "UIFontMetrics",
+      "UIBezierPath",
+      "UIEvent",
+      "UITouch",
+      "UIGestureRecognizer",
+      "UITapGestureRecognizer",
+      "UIPanGestureRecognizer",
+      "UIPinchGestureRecognizer",
+      "UISwipeGestureRecognizer",
+      "UIRotationGestureRecognizer",
+      "UILongPressGestureRecognizer",
+      "UILayoutGuide",
+      "NSLayoutConstraint",
+      "NSLayoutAnchor",
+      "NSLayoutDimension",
+      "NSLayoutXAxisAnchor",
+      "NSLayoutYAxisAnchor",
+      "UIEdgeInsets",
+      "UIOffset",
+      "UIRegion",
+      "UINavigationBar",
+      "UINavigationItem",
+      "UIBarButtonItem",
+      "UITabBar",
+      "UITabBarItem",
+      "UIToolbar",
+      "UIAppearance",
+      "ViewController",
+      "SceneDelegate",
+
+      // ── UIKit protocols ─────────────────────────────────────────
+      "UITableViewDataSource",
+      "UITableViewDelegate",
+      "UICollectionViewDataSource",
+      "UICollectionViewDelegate",
+      "UICollectionViewDelegateFlowLayout",
+      "UICollectionViewLayout",
+      "UICollectionViewFlowLayout",
+      "UIScrollViewDelegate",
+      "UITextFieldDelegate",
+      "UITextViewDelegate",
+      "UISearchBarDelegate",
+      "UISearchResultsUpdating",
+      "UIGestureRecognizerDelegate",
+      "UIPickerViewDataSource",
+      "UIPickerViewDelegate",
+      "UINavigationControllerDelegate",
+      "UIImagePickerControllerDelegate",
+      "UIPopoverPresentationControllerDelegate",
+      "UIAdaptivePresentationControllerDelegate",
+      "UIViewControllerTransitioningDelegate",
+      "UIViewControllerAnimatedTransitioning",
+      "UIViewControllerInteractiveTransitioning",
+      "UIViewControllerContextTransitioning",
+
+      // ── CoreData ────────────────────────────────────────────────
+      "NSManagedObject",
+      "NSManagedObjectContext",
+      "NSManagedObjectModel",
+      "NSPersistentStoreCoordinator",
+      "NSPersistentContainer",
+      "NSFetchRequest",
+      "NSFetchedResultsController",
+      "NSEntityDescription",
+      "NSAttributeDescription",
+      "NSRelationshipDescription",
+
+      // ── CoreLocation / MapKit ────────────────────────────────────
+      "CLLocationManager",
+      "CLLocation",
+      "CLLocationCoordinate2D",
+      "CLRegion",
+      "CLCircularRegion",
+      "MKMapView",
+      "MKAnnotation",
+      "MKAnnotationView",
+      "MKPointAnnotation",
+      "MKOverlay",
+
+      // ── AVFoundation ────────────────────────────────────────────
+      "AVPlayer",
+      "AVPlayerItem",
+      "AVPlayerLayer",
+      "AVAudioPlayer",
+      "AVAudioSession",
+      "AVCaptureSession",
+      "AVCaptureDevice",
+
+      // ── UserNotifications ───────────────────────────────────────
+      "UNUserNotificationCenter",
+      "UNNotificationRequest",
+      "UNNotificationContent",
+      "UNMutableNotificationContent",
+      "UNNotificationTrigger",
+      "UNTimeIntervalNotificationTrigger",
+      "UNCalendarNotificationTrigger",
+      "UNNotification",
+      "UNNotificationResponse",
+  };
+  return classes;
 }

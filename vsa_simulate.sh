@@ -8,10 +8,10 @@ if [[ $? -ne 0 ]]; then
     echo "[ERROR] build.sh failed"
     exit 1
 fi
-cd ~/Documents/tesckey/
+cd ~/Documents/ipa
 
 echo "[INFO] Running MachO2bfuscator..."
-~/src/opensource/lambertse/MachO2bfuscator/build/MachO2bfuscator -o Payload/testckey_objc.app/testckey_objc original_testckey_objc --verbose \
+~/src/opensource/lambertse/MachO2bfuscator/build/MachO2bfuscator -o Payload/vkeyapp_sandbox_release.app/vkeyapp_sandbox_release origin_vkeyapp_sandbox_release --verbose \
     --dependency="/Users/tri.le/Downloads/libobjc.A.dylib" \
     --dependency="/Users/tri.le/Downloads/UIKit" \
     --dependency="/Users/tri.le/Downloads/UIKitCore"
@@ -26,13 +26,14 @@ if [[ $? -ne 0 ]]; then
 fi
 
 echo "[INFO] Removing old IPA (if exists)..."
-rm -f ~/Documents/tesckey/testckey_objc.ipa
+rm -f ~/Documents/ipa/vkeyapp_sandbox_release.ipa
 
 echo "[INFO] Creating new IPA..."
-zip -r testckey_objc.ipa Payload
+zip -r vkeyapp_sandbox_release.ipa Payload
 if [[ $? -ne 0 ]]; then
     echo "[ERROR] zip failed"
     exit 1
 fi
 
 echo "[INFO] Done!"
+
