@@ -11,7 +11,6 @@
 // ══════════════════════���════════════════════════════════════════
 //  RealWordsMangler — word list
 //
-//  Mirrors Swift: Words.englishTop1000
 //  Source: https://www.talkenglish.com/vocabulary/top-1000-words.aspx
 // ═══════════════════════════════════════════════════════════════
 
@@ -20,7 +19,6 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ── Precomputed lookup tables (built once, shared across instances) ──
-// Mirrors Swift: Words.englishWordsPerLength and multiletterWords
 namespace {
 
 // Built once on first use via static-local initialisation.
@@ -75,7 +73,6 @@ const std::string& RealWordsMangler::randomWordOfLength(size_t length,
 }
 
 // ── generateSentence ──────────────────────────────────────────────
-// Mirrors Swift: EnglishSentenceGenerator.getSentence(length:)
 //
 // Concatenates random English words until the total byte length
 // exactly matches `length`.
@@ -96,7 +93,6 @@ std::string RealWordsMangler::generateSentence(size_t length, uint32_t& state,
 
   while (remaining > 0) {
     // Try a multi-letter word first; if it's too long, fall back to
-    // an exact-length word. Mirrors Swift's getSentence(length:) exactly.
     const std::string& candidate = randomMultiletterWord(state);
     const std::string* chosen = &candidate;
 
@@ -113,7 +109,6 @@ std::string RealWordsMangler::generateSentence(size_t length, uint32_t& state,
   // Apply camelCase capitalisation:
   //   word[0]  → kept lowercase (or uppercased if firstUpper=true)
   //   word[1+] → first letter uppercased
-  // Mirrors Swift:
   //   randomWords.prefix(1) + randomWords.suffix(from:1).map {
   //   capitalizedOnFirstLetter }
   std::string result;
@@ -146,7 +141,6 @@ std::string RealWordsMangler::setterFromGetter(const std::string& getter) {
 }
 
 // ── RealWordsMangler::mangle ──────────────────────────────────────
-// Mirrors Swift: RealWordsMangler.mangleSymbols(_:sentenceGenerator:)
 //
 // Three-step pipeline (identical structure to RandomMangler and Swift):
 //   1. Mangle non-setter selectors with camelCase English sentences
@@ -167,7 +161,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   }
 
   // ── Build used-name sets for clash avoidance ──────────────────
-  // Mirrors Swift: mangledSelectorsBlacklist =
   //   (Array(blacklist.selectors) + Array(whitelist.selectors)).uniq
   std::unordered_set<std::string> usedSelectors;
   for (const auto& s : symbols.blacklist.selectors) usedSelectors.insert(s);
@@ -235,7 +228,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   }
 
   // ── Step 2: derive setter mappings from getter mappings ───────
-  // Mirrors Swift: settersManglingMap(matchingToNonSetterManglingMap:)
   for (const auto& sel : symbols.whitelist.selectors) {
     if (!SymbolsCollector::isSetter(sel)) continue;
     std::string getter = getterFromSetter(sel);
@@ -247,7 +239,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
 
   // ── Step 3: mangle class names ────────────────────────────────
   // firstUpper=true → PascalCase ("TurnMuchMean")
-  // Mirrors Swift: .capitalizedOnFirstLetter on the final sentence
   for (const auto& cls : symbols.whitelist.classes) {
     std::string mangled;
     bool found = false;
@@ -268,4 +259,24 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   }
 
   return result;
+}
+
+ManglerType parseManglerType(const std::string& str) {
+  if (str == "caesar") return ManglerType::Caesar;
+  if (str == "random") return ManglerType::Random;
+  if (str == "realwords") return ManglerType::RealWords;
+  throw std::invalid_argument("Invalid mangler type: " + str);
+}
+
+std::string manglerTypeToString(ManglerType type) {
+  switch (type) {
+    case ManglerType::Caesar:
+      return "caesar";
+    case ManglerType::Random:
+      return "random";
+    case ManglerType::RealWords:
+      return "realwords";
+    default:
+      return "unknown";
+  }
 }

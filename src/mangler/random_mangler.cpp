@@ -58,7 +58,6 @@ std::string RandomMangler::randomName(size_t    byteLen,
 }
 
 // ── getterFromSetter ─────────────────────────────────────────────
-// Mirrors Swift: String.getterFromSetter
 // "setTitle:"   → "title"
 // "setIsHidden:" → "isHidden"
 std::string RandomMangler::getterFromSetter(const std::string& setter) {
@@ -76,14 +75,12 @@ std::string RandomMangler::getterFromSetter(const std::string& setter) {
 }
 
 // ── setterFromGetter ─────────────────────────────────────────────
-// Mirrors Swift: String.setterFromGetter
 // "title" → "setTitle:"
 std::string RandomMangler::setterFromGetter(const std::string& getter) {
     return SymbolsCollector::toSetterName(getter);
 }
 
 // ── RandomMangler::mangle ─────────────────────────────────────────
-// Mirrors Swift: RealWordsMangler.mangleSymbols(_:sentenceGenerator:)
 //
 // Pipeline:
 //   1. Mangle non-setter selectors  (random, first char a-z)
@@ -101,8 +98,6 @@ ManglingMap RandomMangler::mangle(const ObfuscationSymbols& symbols) const {
     }
 
     // ── Build used-name sets for clash avoidance ──────────────────
-    // Mirrors Swift: mangledSelectorsBlacklist =
-    //     (Array(blacklist.selectors) + Array(whitelist.selectors)).uniq
     // We must not produce a mangled name that is:
     //   a) already in the blacklist (would break system symbols)
     //   b) already used as another mangled name (duplicate mapping)
@@ -119,7 +114,6 @@ ManglingMap RandomMangler::mangle(const ObfuscationSymbols& symbols) const {
         usedClasses.insert(c);
 
     // ── Step 1: mangle non-setter selectors ───────────────────────
-    // Mirrors Swift: nonSettersManglingMap(sentenceGenerator:)
     //
     // Only non-setters are randomised here.
     // Setters are derived in Step 2 for getter/setter consistency.
@@ -159,7 +153,6 @@ ManglingMap RandomMangler::mangle(const ObfuscationSymbols& symbols) const {
     }
 
     // ── Step 2: derive setter mappings from getter mappings ───────
-    // Mirrors Swift: settersManglingMap(matchingToNonSetterManglingMap:)
     //
     // For every whitelisted setter "setFoo:", find the getter "foo"
     // in nonSetterMap, then derive the mangled setter from the
@@ -181,10 +174,8 @@ ManglingMap RandomMangler::mangle(const ObfuscationSymbols& symbols) const {
     }
 
     // ── Step 3: mangle class names ────────────────────────────────
-    // Mirrors Swift: classManglingMap(sentenceGenerator:)
     //
     // First char is forced to A-Z — ObjC class name convention.
-    // Mirrors Swift: .capitalizedOnFirstLetter
     for (const auto& cls : symbols.whitelist.classes) {
         std::string mangled;
         bool found = false;

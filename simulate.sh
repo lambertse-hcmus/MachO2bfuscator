@@ -12,9 +12,10 @@ cd ~/Documents/tesckey/
 
 echo "[INFO] Running MachO2bfuscator..."
 ~/src/opensource/lambertse/MachO2bfuscator/build/MachO2bfuscator -o Payload/testckey_objc.app/testckey_objc original_testckey_objc --verbose \
-    --dependency="/Users/tri.le/Downloads/libobjc.A.dylib" \
-    --dependency="/Users/tri.le/Downloads/UIKit" \
-    --dependency="/Users/tri.le/Downloads/UIKitCore"
+    --
+    # --dependency="/Users/tri.le/Downloads/libobjc.A.dylib" \
+    # --dependency="/Users/tri.le/Downloads/UIKit" \
+    # --dependency="/Users/tri.le/Downloads/UIKitCore"
 # --blacklist-class=AppDelegate,ViewController,SceneDelegate \
     # --dependency /System/Library/Frameworks/Foundation.framework/Foundation \
     # --dependency /System/Library/Frameworks/UIKit.framework/UIKit 

@@ -65,11 +65,6 @@ ObjCSymbolSets SymbolsCollector::extractFromBinary(const std::string& path) {
       }
     }
 
-    // ── Class names (direct string scan) ─────────────────────────
-    // NEW: Also scan __TEXT __objc_classname directly — same approach
-    // as __objc_methname. This is the ONLY reliable method for framework
-    // dylibs from the shared cache because their DATA pointers are not
-    // resolvable from the file. This mirrors MachObfuscator's Swift approach.
     auto directClassNames = ObjcExtractor::extractClassNamesFromSection(slice);
     for (const auto& cn : directClassNames) {
       if (!cn.value.empty()) {
@@ -145,7 +140,6 @@ ObfuscationSymbols SymbolsCollector::collect(const Config& config) {
   // 3d. Auto-generate setters for ALL blacklisted getters.
   //     ↑ Must run AFTER all sources are merged into blacklist,
   //       so it covers system symbols + libobjc + manual entries.
-  // Mirrors Swift: blacklistSetters = blackListGetters.map { $0.asSetter }
   {
     std::vector<std::string> settersToAdd;
     for (const auto& sel : blacklist.selectors) {

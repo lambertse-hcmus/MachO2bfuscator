@@ -12,7 +12,6 @@ CaesarMangler::CaesarMangler(uint8_t cypherKey)
     : cypherKey_(cypherKey) {}
 
 // ── encryptByte ───────────────────────────────────────────────────
-// Mirrors Swift: CaesarCypher.encrypt(element:key:)
 //
 // Printable ASCII range: [33 ('!'), 126 ('~')] — 94 characters total.
 // ':' (0x3A = 58) is always returned unchanged —
@@ -36,17 +35,12 @@ uint8_t CaesarMangler::encryptByte(uint8_t byte) const {
 }
 
 // ── mangleString ────────────────────────���────────────────────────
-// Mirrors Swift: CaesarStringMangler.mangle(_:usingCypherKey:)
 //
 // Setter-aware: if the string starts with "set", preserve the
 // "set" prefix and only encrypt the getter part.
 //   "setTitle:" → "set" + encrypt("Title:")
 //   "viewDidLoad" → encrypt("viewDidLoad")
 std::string CaesarMangler::mangleString(const std::string& input) const {
-    // Mirrors Swift:
-    // if word.hasPrefix("set") {
-    //     return "set" + mangle(wordSubstring, usingCypherKey: cypherKey)
-    // }
     if (input.size() > 3 &&
         input[0] == 's' && input[1] == 'e' && input[2] == 't')
     {
@@ -63,7 +57,6 @@ std::string CaesarMangler::mangleString(const std::string& input) const {
 }
 
 // ── CaesarMangler::mangle ─────────────────────────────────────────
-// Mirrors Swift: CaesarMangler.mangleSymbols(_:)
 //
 // Applies mangleString() to every whitelisted selector and class,
 // then verifies no mangled name clashes with the blacklist.
@@ -80,7 +73,6 @@ ManglingMap CaesarMangler::mangle(const ObfuscationSymbols& symbols) const {
         result.classNames[cls] = mangleString(cls);
     }
 
-    // Clash check — mirrors Swift: fatalError("ReverseMangler clashed on symbol")
     for (const auto& [orig, mangled] : result.selectors) {
         if (symbols.blacklist.selectors.count(mangled)) {
             throw std::runtime_error(

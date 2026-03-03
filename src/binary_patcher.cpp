@@ -17,7 +17,6 @@ MethTypeObfuscator::MethTypeObfuscator(
     : classNamesMap_(classNamesMap) {}
 
 // ── replaceDelimited ─────────────────────────────────────────────
-// Mirrors Swift: String.replacing(of:precededBy:followedBy:with:)
 //
 // Replaces all occurrences of open+oldName+close with open+newName+close.
 // Example: replaceDelimited(s, "MyClass", "ObfClass", '"', '"')
@@ -47,7 +46,6 @@ std::string MethTypeObfuscator::replaceDelimited(const std::string& input,
 }
 
 // ── MethTypeObfuscator::obfuscate ────────────────────────────────
-// Mirrors Swift: MethTypeObfuscator.generateObfuscatedMethType(methType:)
 //
 // For each class name in the map, replace all occurrences surrounded
 // by any of the 5 delimiter pairs. Returns input unchanged if no
@@ -56,8 +54,6 @@ std::string MethTypeObfuscator::obfuscate(const std::string& methType) const {
   std::string result = methType;
 
   for (const auto& [oldName, newName] : classNamesMap_) {
-    // Fast early-exit — mirrors Swift:
-    // guard curResult.contains(mapping.key) else { return curResult }
     if (result.find(oldName) == std::string::npos) continue;
 
     // Try all 5 delimiter pairs — mirrors Swift:
@@ -77,7 +73,6 @@ std::string MethTypeObfuscator::obfuscate(const std::string& methType) const {
 // ═════════════════════════════���═════════════════════════════════
 
 // ── replaceStringInPlace ─────────────────────────────────────────
-// Mirrors Swift: data.replaceRangeWithPadding(range, with: newValue)
 //
 // Writes newValue bytes at fileOffset in slice.data, then NUL-pads
 // up to origLen bytes of content + 1 NUL terminator.
@@ -103,10 +98,6 @@ void BinaryPatcher::replaceStringInPlace(MachOSlice& slice, uint64_t fileOffset,
 // ═══════════════════════════════════════════════════════════════
 
 // ── patchMethTypes ────────────────────────────────────────────────
-// Mirrors Swift:
-//   data.replaceStrings(inRange: methTypeSection...,
-//       withMapping: MethTypeObfuscator(withMap: map)
-//                       .generateObfuscatedMethType(methType:))
 uint32_t BinaryPatcher::patchMethTypes(MachOSlice& slice,
                                        const ManglingMap& map) {
   const MachSection* sec = slice.objcMethTypeSection();
@@ -141,9 +132,6 @@ uint32_t BinaryPatcher::patchMethTypes(MachOSlice& slice,
 }
 
 // ── patchSelectors ────────────────────────────────────────────────
-// Mirrors Swift:
-//   data.replaceStrings(inRange: methNameSection...,
-//       withMapping: map.selectors)
 uint32_t BinaryPatcher::patchSelectors(MachOSlice& slice,
                                        const ManglingMap& map) {
   const MachSection* sec = slice.objcMethNameSection();
@@ -175,10 +163,6 @@ uint32_t BinaryPatcher::patchSelectors(MachOSlice& slice,
 }
 
 // ── patchClassNames ───────────────────────────────────────────────
-// Mirrors Swift:
-//   classNamesInData.forEach { classNameInData in
-//       if let obfuscatedName = map.classNames[classNameInData.value] {
-//           data.replaceRangeWithPadding(classNameInData.range, ...) } }
 uint32_t BinaryPatcher::patchClassNames(MachOSlice& slice,
                                         const ManglingMap& map) {
   const MachSection* sec = slice.objcClassNameSection();
@@ -215,10 +199,6 @@ uint32_t BinaryPatcher::patchClassNames(MachOSlice& slice,
 
 // ── patch ─────────────────────────────────────────────────────────
 // Patches a single slice in-place.
-// Mirrors Swift: Mach.replaceSymbols(withMap:...)
-//
-// Order: methtype → selectors → classnames
-// Mirrors Swift comment: "Obfuscate from more specific to less specific"
 PatchResult BinaryPatcher::patch(MachOSlice& slice, const ManglingMap& map) {
   PatchResult result;
   {

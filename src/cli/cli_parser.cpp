@@ -1,11 +1,34 @@
 #include "cli_parser.h"
 
 #include <cxxopts.hpp>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
 #include "../logger.h"
+#include "MachO2bfuscator/mangler.h"
 #include "cli_parser.h"
+
+// ── loadFilterFile ────────────────────────────────────────────────
+// Reads a plain-text file of symbol names, one per line.
+// Blank lines and lines starting with '#' are ignored.
+// Throws std::runtime_error if the file cannot be opened.
+static std::unordered_set<std::string> loadFilterFile(const std::string& path) {
+  std::unordered_set<std::string> result;
+  std::ifstream f(path);
+  if (!f) {
+    throw std::runtime_error("Cannot open filter file: " + path);
+  }
+  std::string line;
+  while (std::getline(f, line)) {
+    // Trim trailing CR (Windows line endings)
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    // Skip blank lines and comments
+    if (line.empty() || line[0] == '#') continue;
+    result.insert(line);
+  }
+  return result;
+}
 
 // ── parseArgs ────────────────────────────────────────────────────────
 // Produces an ObfuscatorConfig directly — no intermediate CliArgs.
@@ -68,7 +91,21 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
         // ── Positional ────────────────────────────────────────────────
         ("inputs",
             "One or more Mach-O binaries to obfuscate",
-            cxxopts::value<std::vector<std::string>>());
+            cxxopts::value<std::vector<std::string>>())
+
+          // ── Explicit obfuscation filter lists ─────────────────────────
+        ("class-filter-file",
+            "Path to a file listing class names to obfuscate (one per line). "
+            "When provided, ONLY these classes are obfuscated (intersected "
+            "with the whitelist). Blacklisted classes are still protected.",
+            cxxopts::value<std::string>()->default_value(""))
+
+        ("selector-filter-file",
+            "Path to a file listing selector names to obfuscate (one per "
+            "line). When provided, ONLY these selectors are obfuscated "
+            "(intersected with the whitelist). Blacklisted selectors are "
+            "still protected.",
+            cxxopts::value<std::string>()->default_value(""));
   // clang-format on
 
   options.parse_positional({"inputs"});
@@ -94,21 +131,14 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
     std::exit(1);
   }
 
-  const std::string manglerType = result["mangler"].as<std::string>();
-  if (manglerType != "caesar" && manglerType != "random" &&
-      manglerType != "realwords") {
-    std::cerr
-        << "[error] --mangler must be 'caesar', 'random', or 'realwords', got '"
-        << manglerType << "'\n";
+  const std::string manglerTypeStr = result["mangler"].as<std::string>();
+  if (manglerTypeStr != "caesar" && manglerTypeStr != "random" &&
+      manglerTypeStr != "realwords") {
+    LOGGER_ERROR("Invalid mangler type: '{}'",
+                 result["mangler"].as<std::string>());
     std::exit(1);
   }
-
-  const uint8_t caesarKey = result["caesar-key"].as<uint8_t>();
-  if (caesarKey == 0 || caesarKey >= 26) {
-    LOGGER_ERROR("--caesar-key must be 1–25, got {}",
-                 static_cast<int>(caesarKey));
-    std::exit(1);
-  }
+  const ManglerType manglerType = parseManglerType(manglerTypeStr);
 
   const std::string output = result["output"].as<std::string>();
   const auto inputs = result["inputs"].as<std::vector<std::string>>();
@@ -129,11 +159,22 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
     for (const auto& p : inputs) cfg.images.push_back({p, p});  // in-place
   }
 
-  // Mangler spec — mangler ptr stays null; pipeline builds it via
-  // ensureMangler()
   cfg.manglerType = manglerType;
-  cfg.caesarKey = caesarKey;
-  cfg.randomSeed = result["seed"].as<uint32_t>();
+  if (manglerType == ManglerType::Caesar) {
+    const uint8_t caesarKey = result["caesar-key"].as<uint8_t>();
+    if (caesarKey == 0 || caesarKey >= 26) {
+      LOGGER_ERROR("--caesar-key must be 1–25, got {}",
+                   static_cast<int>(caesarKey));
+      std::exit(1);
+    }
+    cfg.manglerConfig.caesarKey = caesarKey;
+    cfg.mangler = std::make_shared<CaesarMangler>();
+  } else if (manglerType == ManglerType::Random) {
+    cfg.manglerConfig.randomSeed = result["seed"].as<uint32_t>();
+    cfg.mangler = std::make_shared<RandomMangler>();
+  } else if (manglerType == ManglerType::RealWords) {
+    cfg.mangler = std::make_shared<RealWordsMangler>();
+  }
 
   // Dependencies
   if (result.count("dependency"))
@@ -152,6 +193,26 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
   if (result.count("blacklist-class")) {
     const auto& v = result["blacklist-class"].as<std::vector<std::string>>();
     cfg.manualClassBlacklist.insert(v.begin(), v.end());
+  }
+
+  // ── Class filter file ──────────────────────────────────────────
+  {
+    auto path = result["class-filter-file"].as<std::string>();
+    if (!path.empty()) {
+      cfg.classFilterList = loadFilterFile(path);
+      LOGGER_INFO("class-filter-file: loaded {} entries from '{}'",
+                  cfg.classFilterList.size(), path);
+    }
+  }
+
+  // ── Selector filter file ───────────────────────────────────────
+  {
+    auto path = result["selector-filter-file"].as<std::string>();
+    if (!path.empty()) {
+      cfg.selectorFilterList = loadFilterFile(path);
+      LOGGER_INFO("selector-filter-file: loaded {} entries from '{}'",
+                  cfg.selectorFilterList.size(), path);
+    }
   }
 
   // Misc

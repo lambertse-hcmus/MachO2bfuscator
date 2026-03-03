@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "MachO2bfuscator/mangler.h"
 #include "MachO2bfuscator/obfuscator.h"
 #include "cli/cli_parser.h"
 #include "logger.h"
@@ -27,20 +28,19 @@ int main(int argc, char* argv[]) {
   logger::init();
   ObfuscatorConfig cfg = parseArgs(argc, argv);
 
-  if (cfg.verbose) {
-    LOGGER_INFO("Mangler type: {}", cfg.manglerType);
-    if (cfg.manglerType == "caesar") {
-      LOGGER_INFO("Caesar key: {}", static_cast<int>(cfg.caesarKey));
-    } else if (cfg.manglerType == "random") {
-      LOGGER_INFO("Random seed: {}", cfg.randomSeed);
-    } else if (cfg.manglerType == "realwords") {
-      LOGGER_INFO("Using real words mangler");
-    } else {
-      LOGGER_INFO("Hold on, unknown mangler type: {}", cfg.manglerType);
-    }
-    LOGGER_INFO("[*] Images : {}", cfg.images.size());
-    if (cfg.dryRun) LOGGER_INFO("[*] Dry-run mode — no files will be written");
+  if (cfg.manglerType == ManglerType::Caesar) {
+    LOGGER_INFO("Caesar key: {}",
+                static_cast<int>(cfg.manglerConfig.caesarKey));
+  } else if (cfg.manglerType == ManglerType::Random) {
+    LOGGER_INFO("Random seed: {}", cfg.manglerConfig.randomSeed);
+  } else if (cfg.manglerType == ManglerType::RealWords) {
+    LOGGER_INFO("Using real words mangler");
+  } else {
+    LOGGER_INFO("Hold on, unknown mangler type: {}",
+                manglerTypeToString(cfg.manglerType));
   }
+  LOGGER_INFO("[*] Images : {}", cfg.images.size());
+  if (cfg.dryRun) LOGGER_INFO("[*] Dry-run mode — no files will be written");
 
   try {
     ObfuscatorPipeline pipeline(cfg);

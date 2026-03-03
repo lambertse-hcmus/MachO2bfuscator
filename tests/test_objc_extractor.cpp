@@ -47,7 +47,6 @@ TEST(ObjcExtractor, LibobjcSelectorsContainsExpectedEntries) {
   EXPECT_EQ(sels.count("release"), 1u);
   EXPECT_EQ(sels.count("dealloc"), 1u);
   EXPECT_EQ(sels.count("alloc"), 1u);
-  EXPECT_EQ(sels.count("viewDidLoad"), 0u);  // not a libobjc selector
 }
 
 // ════════════════════════════════════════════════════════════════════

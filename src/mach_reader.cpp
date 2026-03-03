@@ -154,7 +154,6 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
       }
 
       // ── Symbol table ─────────────────────────────────────────
-      // Mirrors Swift: case UInt32(LC_SYMTAB): symtab = Symtab(...)
       case LC_SYMTAB: {
         const auto* st = getStructAt<symtab_command>(base, cursor, sliceSize);
         MachSymtab symtab;
@@ -166,7 +165,6 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
       }
 
       // ── Dyld info (export trie + binding opcodes) ─────────────
-      // Mirrors Swift: case LC_DYLD_INFO_ONLY: dyldInfo = DyldInfo(...)
       case LC_DYLD_INFO_ONLY: {
         const auto* di =
             getStructAt<dyld_info_command>(base, cursor, sliceSize);
@@ -191,7 +189,6 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
       }
 
       // ── Dependent dylib paths ────────────────────────────────
-      // Mirrors Swift: case LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, ...
       case LC_LOAD_DYLIB:
       case LC_LOAD_WEAK_DYLIB:
       case LC_LOAD_UPWARD_DYLIB:
@@ -204,7 +201,6 @@ void parseLoadCommands(MachOSlice& slice, BytePtr base, uint64_t sliceSize,
       }
 
       // ── Rpath entries ────────────────────────────────────────
-      // Mirrors Swift: case LC_RPATH:
       case LC_RPATH: {
         const auto* rp = getStructAt<rpath_command>(base, cursor, sliceSize);
         uint64_t pathOff = cursor + rp->path.offset;

@@ -9,8 +9,6 @@
 // ═══════════════════════════════════════════════════════════════
 //  MethTypeObfuscator
 //
-//  Mirrors Swift: struct MethTypeObfuscator in Mach+Replacing.swift
-//
 //  ObjC method type strings encode parameter and return types like:
 //    "v16@0:8"          → void, id, SEL
 //    "v32@0:8@\"MyClass\"16"  → void, id, SEL, MyClass*
@@ -31,7 +29,6 @@ class MethTypeObfuscator {
   explicit MethTypeObfuscator(
       const std::unordered_map<std::string, std::string>& classNamesMap);
 
-  // Mirrors Swift: generateObfuscatedMethType(methType:)
   // Returns the obfuscated methtype string, or the input unchanged
   // if no class names in the mapping appear in the string.
   std::string obfuscate(const std::string& methType) const;
@@ -41,7 +38,6 @@ class MethTypeObfuscator {
 
   // Replace occurrences of oldName surrounded by (open, close)
   // with newName surrounded by the same delimiters.
-  // Mirrors Swift: String.replacing(of:precededBy:followedBy:with:)
   static std::string replaceDelimited(const std::string& input,
                                       const std::string& oldName,
                                       const std::string& newName, char open,
@@ -59,8 +55,6 @@ struct PatchResult {
 
 // ═══════════════════════════════════════════════════════════════
 //  BinaryPatcher
-//
-//  Mirrors Swift: Mach.replaceSymbols(withMap:imageURL:paths:)
 //
 //  Takes a loaded MachOImage (with its file buffer), applies the
 //  ManglingMap to patch all relevant sections in-place, then
@@ -81,7 +75,6 @@ struct PatchResult {
 class BinaryPatcher {
  public:
   // ── Patch a single slice buffer in-place ──────────────────────
-  // Mirrors Swift: Mach.replaceSymbols(withMap:...)
   //
   // Modifies the bytes pointed to by slice.data directly.
   // The caller must ensure slice.data is writable (i.e. the
@@ -99,9 +92,6 @@ class BinaryPatcher {
 
  private:
   // ── Step 1: patch __objc_methtype ────────────────────────────
-  // Mirrors Swift:
-  //   data.replaceStrings(inRange: methTypeSection...,
-  //       withMapping: MethTypeObfuscator(...).generateObfuscatedMethType)
   //
   // Class names embedded in methtype strings are replaced using
   // MethTypeObfuscator. Because methtype strings contain type
@@ -110,9 +100,6 @@ class BinaryPatcher {
   static uint32_t patchMethTypes(MachOSlice& slice, const ManglingMap& map);
 
   // ── Step 2: patch __objc_methname ────────────────────────────
-  // Mirrors Swift:
-  //   data.replaceStrings(inRange: methNameSection...,
-  //       withMapping: map.selectors)
   //
   // Each NUL-terminated selector string in __objc_methname is
   // compared against the selectors map. If found, the bytes are
@@ -121,9 +108,6 @@ class BinaryPatcher {
   static uint32_t patchSelectors(MachOSlice& slice, const ManglingMap& map);
 
   // ── Step 3: patch __objc_classname ───────────────────────────
-  // Mirrors Swift:
-  //   classNamesInData.forEach { classNameInData in
-  //       data.replaceRangeWithPadding(classNameInData.range, ...) }
   //
   // Class names are NUL-terminated strings in __objc_classname.
   // We walk the section and replace each matching name in-place,
