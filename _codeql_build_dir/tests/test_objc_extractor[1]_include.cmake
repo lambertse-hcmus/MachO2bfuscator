@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_objc_extractor[1]_tests.cmake")
-  include("/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_objc_extractor[1]_tests.cmake")
-else()
-  add_test(test_objc_extractor_NOT_BUILT test_objc_extractor_NOT_BUILT)
-endif()

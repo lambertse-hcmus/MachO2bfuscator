@@ -1,1 +1,0 @@
-/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -O3 -DNDEBUG -O3 -Wl,--dependency-file=CMakeFiles/test_obfuscator.dir/link.d CMakeFiles/test_obfuscator.dir/test_obfuscator.cpp.o -o test_obfuscator  ../libMachO2bfuscator_lib.a ../lib/libgtest_main.a ../lib/libgtest.a

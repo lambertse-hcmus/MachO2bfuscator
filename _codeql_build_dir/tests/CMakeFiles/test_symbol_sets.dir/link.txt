@@ -1,1 +1,0 @@
-/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -O3 -DNDEBUG -O3 -Wl,--dependency-file=CMakeFiles/test_symbol_sets.dir/link.d CMakeFiles/test_symbol_sets.dir/test_symbol_sets.cpp.o -o test_symbol_sets  ../libMachO2bfuscator_lib.a ../lib/libgtest_main.a ../lib/libgtest.a

@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_binary_patcher[1]_tests.cmake")
-  include("/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_binary_patcher[1]_tests.cmake")
-else()
-  add_test(test_binary_patcher_NOT_BUILT test_binary_patcher_NOT_BUILT)
-endif()
