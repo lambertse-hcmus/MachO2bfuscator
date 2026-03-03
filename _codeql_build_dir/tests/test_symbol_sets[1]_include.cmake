@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_symbol_sets[1]_tests.cmake")
+  include("/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_symbol_sets[1]_tests.cmake")
+else()
+  add_test(test_symbol_sets_NOT_BUILT test_symbol_sets_NOT_BUILT)
+endif()

@@ -1,0 +1,134 @@
+[
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/mach_reader.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mach_reader.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mach_reader.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/mach_reader.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/objc_types.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/objc_types.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/objc_types.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/objc_types.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/objc_extractor.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/objc_extractor.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/objc_extractor.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/objc_extractor.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/symbol_sets.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/symbol_sets.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/symbol_sets.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/symbol_sets.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/binary_patcher.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/binary_patcher.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/binary_patcher.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/binary_patcher.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/obfuscator.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/obfuscator.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/obfuscator.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/obfuscator.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/logger.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/logger.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/logger.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/logger.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/cli/cli_parser.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/cli/cli_parser.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/cli/cli_parser.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/cli/cli_parser.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/caesar_mangler.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/caesar_mangler.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/caesar_mangler.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/caesar_mangler.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/random_mangler.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/random_mangler.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/random_mangler.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/random_mangler.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/3rdparty/cxxopts/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/real_word_mangler.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/real_word_mangler.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/mangler/real_word_mangler.cpp",
+  "output": "CMakeFiles/MachO2bfuscator_lib.dir/src/mangler/real_word_mangler.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/MachO2bfuscator.dir/src/main.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/src/main.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/src/main.cpp",
+  "output": "CMakeFiles/MachO2bfuscator.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_mach_reader.dir/test_mach_reader.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_mach_reader.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_mach_reader.cpp",
+  "output": "tests/CMakeFiles/test_mach_reader.dir/test_mach_reader.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_objc_extractor.dir/test_objc_extractor.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_objc_extractor.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_objc_extractor.cpp",
+  "output": "tests/CMakeFiles/test_objc_extractor.dir/test_objc_extractor.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_symbol_sets.dir/test_symbol_sets.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_symbol_sets.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_symbol_sets.cpp",
+  "output": "tests/CMakeFiles/test_symbol_sets.dir/test_symbol_sets.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_mangler.dir/test_mangler.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_mangler.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_mangler.cpp",
+  "output": "tests/CMakeFiles/test_mangler.dir/test_mangler.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_binary_patcher.dir/test_binary_patcher.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_binary_patcher.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_binary_patcher.cpp",
+  "output": "tests/CMakeFiles/test_binary_patcher.dir/test_binary_patcher.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++ -DTEST_OBJC_ABSOLUTE_PATH=\\\"/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/assets/testckey_objc\\\" -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -o CMakeFiles/test_obfuscator.dir/test_obfuscator.cpp.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_obfuscator.cpp",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/tests/test_obfuscator.cpp",
+  "output": "tests/CMakeFiles/test_obfuscator.dir/test_obfuscator.cpp.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-build/googlemock",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/src/gmock-all.cc",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/src/gmock-all.cc",
+  "output": "_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-build/googlemock",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gmock_main.dir/src/gmock_main.cc.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/src/gmock_main.cc",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googlemock/src/gmock_main.cc",
+  "output": "_deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-build/googletest",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -I/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest.dir/src/gtest-all.cc.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/src/gtest-all.cc",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/src/gtest-all.cc",
+  "output": "_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o"
+},
+{
+  "directory": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-build/googletest",
+  "command": "/tmp/codeql-scratch-6e9342dd0d9eddd1/dbs/cpp/working/autobuild/bin/c++  -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/include -isystem /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest -O3 -DNDEBUG -O3 -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest_main.dir/src/gtest_main.cc.o -c /home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/src/gtest_main.cc",
+  "file": "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/_deps/googletest-src/googletest/src/gtest_main.cc",
+  "output": "_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o"
+}
+]

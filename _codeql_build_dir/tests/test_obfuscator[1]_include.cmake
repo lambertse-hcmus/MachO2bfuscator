@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_obfuscator[1]_tests.cmake")
+  include("/home/runner/work/MachO2bfuscator/MachO2bfuscator/_codeql_build_dir/tests/test_obfuscator[1]_tests.cmake")
+else()
+  add_test(test_obfuscator_NOT_BUILT test_obfuscator_NOT_BUILT)
+endif()

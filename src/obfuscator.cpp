@@ -99,6 +99,56 @@ ManglingMap ObfuscatorPipeline::buildManglingMap(
   LOGGER_INFO("blacklist: {} selectors, {} classes",
               symbolsOut.blacklist.selectors.size(),
               symbolsOut.blacklist.classes.size());
+
+  // ── Apply filter lists (if provided) ──────────────────────────────
+  // When a filter list is non-empty, intersect the whitelist with it.
+  // This restricts obfuscation to ONLY the symbols listed in the file.
+  // Blacklisted symbols are already absent from the whitelist, so this
+  // is a pure restriction — never an expansion.
+  if (!config_.classFilterList.empty()) {
+    if (config_.verbose) {
+      for (const auto& cls : config_.classFilterList) {
+        if (!symbolsOut.whitelist.classes.count(cls)) {
+          LOGGER_WARN(
+              "  class filter entry '{}' not in whitelist (blacklisted or not "
+              "found)",
+              cls);
+        }
+      }
+    }
+    std::unordered_set<std::string> filtered;
+    for (const auto& cls : symbolsOut.whitelist.classes) {
+      if (config_.classFilterList.count(cls)) {
+        filtered.insert(cls);
+      }
+    }
+    symbolsOut.whitelist.classes = std::move(filtered);
+    LOGGER_INFO("  class filter applied: {} classes will be obfuscated",
+                symbolsOut.whitelist.classes.size());
+  }
+
+  if (!config_.selectorFilterList.empty()) {
+    if (config_.verbose) {
+      for (const auto& sel : config_.selectorFilterList) {
+        if (!symbolsOut.whitelist.selectors.count(sel)) {
+          LOGGER_WARN(
+              "  selector filter entry '{}' not in whitelist (blacklisted or "
+              "not found)",
+              sel);
+        }
+      }
+    }
+    std::unordered_set<std::string> filtered;
+    for (const auto& sel : symbolsOut.whitelist.selectors) {
+      if (config_.selectorFilterList.count(sel)) {
+        filtered.insert(sel);
+      }
+    }
+    symbolsOut.whitelist.selectors = std::move(filtered);
+    LOGGER_INFO("  selector filter applied: {} selectors will be obfuscated",
+                symbolsOut.whitelist.selectors.size());
+  }
+
   if (config_.verbose && config_.dryRun) {
     for (const auto& sel : symbolsOut.whitelist.selectors) {
       LOGGER_INFO("  whitelist selector: {}", sel);
