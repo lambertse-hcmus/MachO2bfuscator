@@ -1,11 +1,47 @@
 #include "cli_parser.h"
 
 #include <cxxopts.hpp>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 
 #include "../logger.h"
 #include "cli_parser.h"
+
+// ── loadFilterFile ────────────────────────────────────────────────────
+// Reads a plain-text filter file (one symbol per line).
+// Lines starting with '#' and blank lines are ignored.
+// Leading/trailing whitespace is trimmed from each line.
+// Returns empty set if path is empty.
+// Throws std::runtime_error if the file cannot be opened.
+static std::unordered_set<std::string> loadFilterFile(
+    const std::string& path, const std::string& kind) {
+  if (path.empty()) return {};
+
+  std::ifstream file(path);
+  if (!file) {
+    throw std::runtime_error("Cannot open " + kind + " filter file: " + path);
+  }
+
+  std::unordered_set<std::string> result;
+  std::string line;
+  while (std::getline(file, line)) {
+    // Trim leading whitespace
+    auto start = line.find_first_not_of(" \t\r");
+    if (start == std::string::npos) continue;  // blank line
+    line = line.substr(start);
+    // Trim trailing whitespace
+    auto end = line.find_last_not_of(" \t\r");
+    if (end != std::string::npos) line = line.substr(0, end + 1);
+    // Skip comments
+    if (line.empty() || line[0] == '#') continue;
+    result.insert(line);
+  }
+
+  LOGGER_INFO("Loaded {} {} filter entries from {}", result.size(), kind, path);
+  return result;
+}
 
 // ── parseArgs ────────────────────────────────────────────────────────
 // Produces an ObfuscatorConfig directly — no intermediate CliArgs.
@@ -54,6 +90,17 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
         ("blacklist-class",
             "Class name that must NOT be obfuscated (repeatable)",
             cxxopts::value<std::vector<std::string>>())
+
+        // ── Filter files ──────────────────────────────────────────────
+        ("class-filter-file",
+            "Path to file with class names to obfuscate (one per line). "
+            "When set, only these classes are obfuscated.",
+            cxxopts::value<std::string>()->default_value(""))
+
+        ("selector-filter-file",
+            "Path to file with selector names to obfuscate (one per line). "
+            "When set, only these selectors are obfuscated.",
+            cxxopts::value<std::string>()->default_value(""))
 
         // ── Dependencies ──────────────────────────────────────────────
         ("d,dependency",
@@ -152,6 +199,23 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
   if (result.count("blacklist-class")) {
     const auto& v = result["blacklist-class"].as<std::vector<std::string>>();
     cfg.manualClassBlacklist.insert(v.begin(), v.end());
+  }
+
+  // ── Filter files ──────────────────────────────────────────────────
+  std::string classFilterPath = result["class-filter-file"].as<std::string>();
+  std::string selectorFilterPath =
+      result["selector-filter-file"].as<std::string>();
+
+  try {
+    if (!classFilterPath.empty()) {
+      cfg.classFilterList = loadFilterFile(classFilterPath, "class");
+    }
+    if (!selectorFilterPath.empty()) {
+      cfg.selectorFilterList = loadFilterFile(selectorFilterPath, "selector");
+    }
+  } catch (const std::runtime_error& e) {
+    LOGGER_ERROR("{}", e.what());
+    std::exit(1);
   }
 
   // Misc

@@ -63,6 +63,13 @@ struct ObfuscatorConfig {
   std::unordered_set<std::string> manualSelectorBlacklist;
   std::unordered_set<std::string> manualClassBlacklist;
 
+  // ── Filter lists (optional) ───────────────────────────────────────
+  // When non-empty, ONLY these symbols are obfuscated.
+  // They are intersected with the whitelist (blacklisted symbols are still safe).
+  // Populated from --class-filter-file / --selector-filter-file.
+  std::unordered_set<std::string> classFilterList;     // empty = no filter
+  std::unordered_set<std::string> selectorFilterList;  // empty = no filter
+
   // ── Erase options ────────────────────────────────────────────────
   // NUL-out __objc_methtype after patching.
   // Mirrors Swift: options.eraseMethType
