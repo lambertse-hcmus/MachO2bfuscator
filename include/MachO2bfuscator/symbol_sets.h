@@ -8,8 +8,6 @@
 // ═══════════════════════════════════════════════════════════════
 //  ObjCSymbolSets
 //
-//  A flat set of selector names and class names.
-//  Used for both whitelist and blacklist.
 // ═══════════════════════════════════════════════════════════════
 struct ObjCSymbolSets {
   std::unordered_set<std::string> selectors;

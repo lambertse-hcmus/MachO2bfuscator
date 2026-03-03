@@ -85,7 +85,9 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
 
         // ── Misc ──────────────────────────────────────────────────────
         ("n,dry-run",  "Analyse and report without writing any output file")
-        ("v,verbose",  "Print detailed progress and statistics")
+        ("log-level",
+            "Logging level: 'info' (default), 'debug', or 'verbose'",
+            cxxopts::value<std::string>()->default_value("info"))
         ("h,help",     "Print this help message and exit")
 
         // ── Positional ────────────────────────────────────────────────
@@ -217,7 +219,17 @@ ObfuscatorConfig parseArgs(int argc, char* argv[]) {
 
   // Misc
   cfg.dryRun = result.count("dry-run") > 0;
-  cfg.verbose = result.count("verbose") > 0;
 
+  const std::string logLevelStr = result["log-level"].as<std::string>();
+  if (logLevelStr == "info") {
+    cfg.logLevel = LOG_LEVEL_FROM_INFO;
+  } else if (logLevelStr == "debug") {
+    cfg.logLevel = LOG_LEVEL_FROM_DEBUG;
+  } else if (logLevelStr == "verbose") {
+    cfg.logLevel = LOG_LEVEL_VERBOSE;
+  } else {
+    LOGGER_ERROR("Invalid log level: '{}'", logLevelStr);
+    cfg.logLevel = LOG_LEVEL_FROM_INFO;
+  }
   return cfg;
 }

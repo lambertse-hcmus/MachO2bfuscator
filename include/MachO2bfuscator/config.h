@@ -19,7 +19,7 @@ struct ObfuscatorConfig {
   std::shared_ptr<IMangler> mangler;
   ManglerType manglerType = ManglerType::RealWords;
   union {
-    uint8_t caesarKey;  
+    uint8_t caesarKey;
     uint32_t randomSeed;
   } manglerConfig;
 
@@ -37,5 +37,5 @@ struct ObfuscatorConfig {
   // ── Misc ─────────────────────────────────────────────────────────
   // Analyse everything but write no output files.
   bool dryRun = false;
-  bool verbose = false;
+  int logLevel = 0;  // 0=info, 1=debug, 2=verbose
 };

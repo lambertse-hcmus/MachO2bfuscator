@@ -25,8 +25,8 @@ static void printStats(const ObfuscatorStats& s) {
 
 // ── main ─────────────────────────────────────────────────────────────
 int main(int argc, char* argv[]) {
-  logger::init();
   ObfuscatorConfig cfg = parseArgs(argc, argv);
+  logger::init(cfg.logLevel);
 
   if (cfg.manglerType == ManglerType::Caesar) {
     LOGGER_INFO("Caesar key: {}",
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     ObfuscatorPipeline pipeline(cfg);
     ObfuscatorStats stats = pipeline.run();
 
-    if (cfg.verbose) {
+    if (logger::verboseAllowed()) {
       printStats(stats);
     } else if (!cfg.dryRun) {
       LOGGER_INFO(

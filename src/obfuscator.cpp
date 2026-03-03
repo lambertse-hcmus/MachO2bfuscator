@@ -96,7 +96,7 @@ ManglingMap ObfuscatorPipeline::buildManglingMap(
   LOGGER_INFO("blacklist: {} selectors, {} classes",
               symbolsOut.blacklist.selectors.size(),
               symbolsOut.blacklist.classes.size());
-  if (config_.verbose && config_.dryRun) {
+  if (logger::verboseAllowed() || config_.dryRun) {
     for (const auto& sel : symbolsOut.whitelist.selectors) {
       LOGGER_INFO("  whitelist selector: {}", sel);
     }

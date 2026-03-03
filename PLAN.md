@@ -124,7 +124,7 @@ Flag	Maps to
 --blacklist-selector	config.manualSelectorBlacklist
 --blacklist-class	config.manualClassBlacklist
 --dependency	config.dependencyPaths
--v / --verbose	config.verbose
+--log-level config.logLevel
 positional args	config.images (src=dst for in-place)
 ## Phase 9 — End-to-End Validation
 
