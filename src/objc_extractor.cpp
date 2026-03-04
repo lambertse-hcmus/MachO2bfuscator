@@ -7,9 +7,6 @@
 #include "MachO2bfuscator/objc_structs.h"
 #include "logger.h"
 
-// ═══════════════════════════════════════════════════════════════
-//  Internal implementation
-// ═══════════════════════════════════════════════════════════════
 namespace {
 
 // ── Safe struct reader ────────────────────────────────────────────
@@ -563,8 +560,6 @@ static bool isValidObjCIdentifier(const std::string& s) {
 }
 
 // ── extractClassNamesFromSection ──────────────────────────────────
-// Mirrors extractSelectors() exactly, but reads from __TEXT __objc_classname.
-//
 // The __objc_classname section is a plain null-terminated C-string table —
 // identical in layout to __objc_methname. Every class name and protocol name
 // defined in the binary appears here as a readable string.

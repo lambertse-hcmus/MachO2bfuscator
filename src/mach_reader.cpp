@@ -12,9 +12,9 @@
 #include <unistd.h>
 
 // Apple Mach-O headers — all struct do
-#include <mach-o/fat.h>  // fat_header, fat_arch
-#include <mach-o/loader.h>  // mach_header, mach_header_64, load_command, segment_command_64, …
-#include <mach-o/swap.h>  // OSSwapInt32 etc.
+#include <mach-o/fat.h>
+#include <mach-o/loader.h>
+#include <mach-o/swap.h>
 
 //
 #include "MachO2bfuscator/objc_structs.h"
@@ -26,10 +26,6 @@
 #ifndef LC_DYLD_CHAINED_FIXUPS
 #define LC_DYLD_CHAINED_FIXUPS 0x80000034u
 #endif
-
-// ═══════════════════════════════════════════════════════════════
-//  Internal helpers
-// ═══════════════════════════════════════════════════════════════
 
 namespace {
 
@@ -376,7 +372,7 @@ std::vector<MachOSlice> parseFatBinary(BytePtr base, uint64_t totalSize) {
   return slices;
 }
 
-}  // anonymous namespace
+}  // namespace
 
 // ═══════════════════════════════════════════════════════════════
 //  MachOSlice method implementations
@@ -418,21 +414,22 @@ const MachSection* MachOSlice::objcMethNameSection() const {
 const MachSection* MachOSlice::objcMethTypeSection() const {
   return findSection("__TEXT", "__objc_methtype");
 }
+const MachSection* MachOSlice::objcCatlistSection() const {
+  return findSectionInAnySegment({"__DATA_CONST", "__DATA"}, "__objc_catlist");
+}
+const MachSection* MachOSlice::cstringSection() const {
+  return findSection("__TEXT", "__cstring");
+}
+
 // From iOS 14+ / Xcode 12+, Apple moved these sections to __DATA_CONST for
 // performance. Both segment names must be tried.
 const MachSection* MachOSlice::objcClasslistSection() const {
   return findSectionInAnySegment({"__DATA_CONST", "__DATA"},
                                  "__objc_classlist");
 }
-const MachSection* MachOSlice::objcCatlistSection() const {
-  return findSectionInAnySegment({"__DATA_CONST", "__DATA"}, "__objc_catlist");
-}
 const MachSection* MachOSlice::objcProtocollistSection() const {
   return findSectionInAnySegment({"__DATA_CONST", "__DATA"},
                                  "__objc_protolist");
-}
-const MachSection* MachOSlice::cstringSection() const {
-  return findSection("__TEXT", "__cstring");
 }
 
 // ── VM address → file offset ─────────────────────────────────────
@@ -489,7 +486,6 @@ MachOImage::MachOImage(MachOImage&& o) noexcept
 
 MachOImage& MachOImage::operator=(MachOImage&& o) noexcept {
   if (this != &o) {
-    // Release current resources
     if (rawData) {
       if (isMmapped)
         munmap(rawData, static_cast<size_t>(rawDataSize));
@@ -514,7 +510,7 @@ MachOImage& MachOImage::operator=(MachOImage&& o) noexcept {
 MachOImage loadMachOImage(const std::string& path) {
   // ── Open file ─────────────────────────────────────────────────
   int fd =
-      open(path.c_str(), O_RDWR);  // read-write for in-place patching later
+      open(path.c_str(), O_RDWR);  
   if (fd < 0) {
     throw MachLoadError("Cannot open file: " + path);
   }
@@ -539,7 +535,7 @@ MachOImage loadMachOImage(const std::string& path) {
   // the file when we msync + munmap.
   void* mapped = mmap(nullptr, static_cast<size_t>(fileSize),
                       PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-  close(fd);  // fd no longer needed after mmap
+  close(fd);  
 
   if (mapped == MAP_FAILED) {
     throw MachLoadError("mmap failed for file: " + path);

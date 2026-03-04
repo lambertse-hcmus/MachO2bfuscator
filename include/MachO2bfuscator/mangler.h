@@ -69,9 +69,25 @@ class RealWordsMangler : public IMangler {
   // Returns a random multi-letter word (length >= 2).
   static const std::string& randomMultiletterWord(uint32_t& state);
 
-  // xorshift32 — same PRNG used in RandomMangler for consistency
   static uint32_t advance(uint32_t state);
 };
 
-ManglerType parseManglerType(const std::string& str);
-std::string manglerTypeToString(ManglerType type);
+inline ManglerType parseManglerType(const std::string& str) {
+  if (str == "caesar") return ManglerType::Caesar;
+  if (str == "random") return ManglerType::Random;
+  if (str == "realwords") return ManglerType::RealWords;
+  throw std::invalid_argument("Invalid mangler type: " + str);
+}
+
+inline std::string manglerTypeToString(ManglerType type) {
+  switch (type) {
+    case ManglerType::Caesar:
+      return "caesar";
+    case ManglerType::Random:
+      return "random";
+    case ManglerType::RealWords:
+      return "realwords";
+    default:
+      return "unknown";
+  }
+}

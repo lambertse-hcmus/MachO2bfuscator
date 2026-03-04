@@ -27,7 +27,6 @@ std::vector<std::string> ObjcProperty::attributeValues() const {
 //         fatalError(...)
 //     }
 //     return typeattr
-// }
 //
 // The type attribute is always the first component and starts with 'T'.
 // e.g. "T@\"NSString\""  means: type = pointer to NSString

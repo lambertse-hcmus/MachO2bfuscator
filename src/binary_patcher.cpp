@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
@@ -47,9 +46,6 @@ std::string MethTypeObfuscator::replaceDelimited(const std::string& input,
 
 // ── MethTypeObfuscator::obfuscate ────────────────────────────────
 //
-// For each class name in the map, replace all occurrences surrounded
-// by any of the 5 delimiter pairs. Returns input unchanged if no
-// substitutions were made.
 std::string MethTypeObfuscator::obfuscate(const std::string& methType) const {
   std::string result = methType;
 
@@ -71,12 +67,6 @@ std::string MethTypeObfuscator::obfuscate(const std::string& methType) const {
 // ═══════════════════════════════════════════════════════════════
 //  BinaryPatcher helpers
 // ═════════════════════════════���═════════════════════════════════
-
-// ── replaceStringInPlace ─────────────────────────────────────────
-//
-// Writes newValue bytes at fileOffset in slice.data, then NUL-pads
-// up to origLen bytes of content + 1 NUL terminator.
-// If newValue.size() > origLen: silently truncates to origLen.
 void BinaryPatcher::replaceStringInPlace(MachOSlice& slice, uint64_t fileOffset,
                                          const std::string& newValue,
                                          size_t origLen) {
@@ -218,17 +208,9 @@ PatchResult BinaryPatcher::patch(MachOSlice& slice, const ManglingMap& map) {
 // ── patchFile ─────────────────────────────────────────────────────
 // Loads a binary from disk, patches all slices in-place via the
 // shared rawData buffer, then writes the whole buffer back to disk.
-//
-// Key insight: slice.data is a non-owning pointer INTO image.rawData.
-// Patching slice.data therefore patches image.rawData directly.
-// No copy-back step is needed — just write rawData after all patches
-//
 PatchResult BinaryPatcher::patchFile(const std::string& srcPath,
                                      const std::string& dstPath,
                                      const ManglingMap& map) {
-  // ── Load from srcPath ─────────────────────────────────────────
-  // Slices are non-owning views into image.rawData.
-  // Patching slices patches rawData in-place.
   MachOImage image = loadMachOImage(srcPath);
 
   // ── Patch each slice in-place ─────────────────────────────────

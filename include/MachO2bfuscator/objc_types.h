@@ -7,28 +7,16 @@
 
 #include "types.h"
 
-// ═══════════════════════════════════════════════════════════════
-//  StringInData
-//
-//  Holds a string value AND remembers exactly where in the
-//  binary file it lives (fileOffset + length).
-//
-//  This is the key design insight from the original project:
-//  we don't just extract the string — we remember its location
-//  so Phase 6 can patch it in-place without re-scanning.
-// ═══════════════════════════════════════════════════════════════
 struct StringInData {
-  std::string value;    // the actual string content
-  uint64_t fileOffset;  // byte offset from start of this slice's data
-  uint64_t length;      // byte length (== value.size() for ASCII)
+  std::string value;
+  uint64_t fileOffset;
+  uint64_t length;
 
-  // Convenience: end offset (exclusive)
   uint64_t end() const { return fileOffset + length; }
 
   // Swift class names exposed to ObjC always start with "_Tt"
   bool isSwiftName() const {
-    return value.size() >= 3 && value[0] == '_' && value[1] == 'T' &&
-           value[2] == 't';
+    return value.size() >= 3 && value.find("_Tt") == 0;
   }
 };
 
@@ -36,8 +24,8 @@ struct StringInData {
 //  ObjcMethod
 // ═══════════════════════════════════════════════════════════════
 struct ObjcMethod {
-  StringInData name;      // selector name, e.g. "viewDidLoad"
-  StringInData methType;  // type encoding, e.g. "v16@0:8"
+  StringInData name;
+  StringInData methType;
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -68,7 +56,7 @@ struct ObjcProperty {
 //  ObjcClass
 // ═══════════════════════════════════════════════════════════════
 struct ObjcClass {
-  StringInData name;  // class name, e.g. "MyViewController"
+  StringInData name;  
   std::optional<StringInData> ivarLayout;  // ivar layout bitmap (often null)
   std::vector<ObjcMethod> methods;
   std::vector<ObjcIvar> ivars;
@@ -79,7 +67,7 @@ struct ObjcClass {
 //  ObjcCategory
 // ═══════════════════════════════════════════════════════════════
 struct ObjcCategory {
-  StringInData name;  // category name (stored in __objc_classname if pure ObjC)
+  StringInData name;
   std::optional<ObjcClass>
       cls;  // the class this category extends (may be null for external class)
   std::vector<ObjcMethod> methods;
@@ -97,9 +85,6 @@ struct ObjcProtocol {
 
 // ═══════════════════════════════════════════════════════════════
 //  ObjcMetadata
-//
-//  The complete extracted ObjC metadata from one MachOSlice.
-//  This is what Phase 3 produces and what Phase 4 consumes.
 // ═══════════════════════════════════════════════════════════════
 struct ObjcMetadata {
   std::vector<ObjcClass> classes;

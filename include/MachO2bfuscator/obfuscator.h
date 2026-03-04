@@ -34,15 +34,10 @@ class ObfuscatorPipeline {
  private:
   ObfuscatorConfig config_;
 
-  // Materialise a concrete IMangler from the spec fields if
-  // config_.mangler is null. Called once at the start of run().
-  void ensureMangler();
-
   ManglingMap buildManglingMap(ObfuscationSymbols& symbolsOut) const;
 
   static void eraseSectionIfPresent(MachOSlice& slice,
                                     const std::string& segName,
                                     const std::string& secName);
   static void eraseSymtab(MachOSlice& slice);
-  void log(const std::string& msg) const;
 };

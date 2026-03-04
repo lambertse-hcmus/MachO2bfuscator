@@ -4,18 +4,11 @@
 #include <unordered_set>
 #include <vector>
 
-
-// ═══════════════════════════════════════════════════════════════
-//  ObjCSymbolSets
-//
-// ═══════════════════════════════════════════════════════════════
 struct ObjCSymbolSets {
   std::unordered_set<std::string> selectors;
   std::unordered_set<std::string> classes;
 
-  // Merge another set into this one (union in-place)
   void mergeFrom(const ObjCSymbolSets& other);
-
   bool empty() const { return selectors.empty() && classes.empty(); }
 };
 
@@ -55,7 +48,6 @@ class SymbolsCollector {
   static ObfuscationSymbols collect(const Config& config);
   static ObjCSymbolSets extractFromBinary(const std::string& path);
 
-  // Public — also used by Phase 5 mangler for getter/setter consistency
   static std::string toSetterName(const std::string& getterName);
   static bool isSetter(const std::string& selector);
 };

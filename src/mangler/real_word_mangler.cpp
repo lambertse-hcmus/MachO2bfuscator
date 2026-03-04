@@ -10,18 +10,9 @@
 
 // ══════════════════════���════════════════════════════════════════
 //  RealWordsMangler — word list
-//
-//  Source: https://www.talkenglish.com/vocabulary/top-1000-words.aspx
 // ═══════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════
-//  RealWordsMangler — implementation
-// ═══════════════════════════════════════════════════════════════
-
-// ── Precomputed lookup tables (built once, shared across instances) ──
 namespace {
-
-// Built once on first use via static-local initialisation.
 struct WordTables {
   // words grouped by their exact character length
   std::unordered_map<size_t, std::vector<std::string>> byLength;
@@ -51,17 +42,12 @@ uint32_t RealWordsMangler::advance(uint32_t s) {
   return s;
 }
 
-// ── randomMultiletterWord ──────────────────────────────────────────
-// Picks a random word with length >= 2. Always succeeds (list is non-empty).
 const std::string& RealWordsMangler::randomMultiletterWord(uint32_t& state) {
   const auto& words = wordTables().multiLetter;
   state = advance(state);
   return words[state % words.size()];
 }
 
-// ── randomWordOfLength ────────────────────────────────────────────
-// Returns a random word of exactly `length` chars.
-// Returns an empty static string if no word of that length exists.
 const std::string& RealWordsMangler::randomWordOfLength(size_t length,
                                                         uint32_t& state) {
   static const std::string kEmpty;
@@ -72,18 +58,6 @@ const std::string& RealWordsMangler::randomWordOfLength(size_t length,
   return it->second[state % it->second.size()];
 }
 
-// ── generateSentence ──────────────────────────────────────────────
-//
-// Concatenates random English words until the total byte length
-// exactly matches `length`.
-//
-//   - First word is kept as-is (lowercase start for selectors).
-//   - Every subsequent word has its first letter capitalised
-//     → produces camelCase output e.g. "turnMuchMean"
-//   - If firstUpper=true, the very first letter is capitalised too
-//     → produces PascalCase output e.g. "TurnMuchMean" (class names)
-//
-// Returns empty string if generation fails (no word of remaining length).
 std::string RealWordsMangler::generateSentence(size_t length, uint32_t& state,
                                                bool firstUpper) const {
   if (length == 0) return "";
@@ -107,10 +81,6 @@ std::string RealWordsMangler::generateSentence(size_t length, uint32_t& state,
   }
 
   // Apply camelCase capitalisation:
-  //   word[0]  → kept lowercase (or uppercased if firstUpper=true)
-  //   word[1+] → first letter uppercased
-  //   randomWords.prefix(1) + randomWords.suffix(from:1).map {
-  //   capitalizedOnFirstLetter }
   std::string result;
   result.reserve(length);
   for (size_t i = 0; i < words.size(); ++i) {
@@ -127,7 +97,6 @@ std::string RealWordsMangler::generateSentence(size_t length, uint32_t& state,
   return result;
 }
 
-// ── helper: getterFromSetter / setterFromGetter ───────────────────
 std::string RealWordsMangler::getterFromSetter(const std::string& setter) {
   if (!SymbolsCollector::isSetter(setter)) return "";
   std::string p = setter.substr(3, setter.size() - 4);
@@ -141,18 +110,13 @@ std::string RealWordsMangler::setterFromGetter(const std::string& getter) {
 }
 
 // ── RealWordsMangler::mangle ──────────────────────────────────────
-//
-// Three-step pipeline (identical structure to RandomMangler and Swift):
-//   1. Mangle non-setter selectors with camelCase English sentences
-//   2. Derive setter mappings from getter mappings
-//   3. Mangle class names with PascalCase English sentences
 RealWordsMangler::RealWordsMangler(uint32_t seed, uint32_t maxRetries)
     : seed_(seed), maxRetries_(maxRetries) {}
 
 ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   ManglingMap result;
 
-  // Seed the PRNG — same logic as RandomMangler
+  // Seed the PRNG 
   uint32_t state = seed_;
   if (state == 0) {
     std::random_device rd;
@@ -161,7 +125,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   }
 
   // ── Build used-name sets for clash avoidance ──────────────────
-  //   (Array(blacklist.selectors) + Array(whitelist.selectors)).uniq
   std::unordered_set<std::string> usedSelectors;
   for (const auto& s : symbols.blacklist.selectors) usedSelectors.insert(s);
   for (const auto& s : symbols.whitelist.selectors) usedSelectors.insert(s);
@@ -190,7 +153,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
     size_t wordLen = sel.size() - colonCount;
 
     if (wordLen == 0) {
-      // Degenerate selector (all colons) — skip
       continue;
     }
 
@@ -224,7 +186,6 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
       result.selectors[sel] = mangled;
       usedSelectors.insert(mangled);
     }
-    // Silent skip on exhaustion — same policy as RandomMangler
   }
 
   // ── Step 2: derive setter mappings from getter mappings ───────
@@ -261,22 +222,3 @@ ManglingMap RealWordsMangler::mangle(const ObfuscationSymbols& symbols) const {
   return result;
 }
 
-ManglerType parseManglerType(const std::string& str) {
-  if (str == "caesar") return ManglerType::Caesar;
-  if (str == "random") return ManglerType::Random;
-  if (str == "realwords") return ManglerType::RealWords;
-  throw std::invalid_argument("Invalid mangler type: " + str);
-}
-
-std::string manglerTypeToString(ManglerType type) {
-  switch (type) {
-    case ManglerType::Caesar:
-      return "caesar";
-    case ManglerType::Random:
-      return "random";
-    case ManglerType::RealWords:
-      return "realwords";
-    default:
-      return "unknown";
-  }
-}

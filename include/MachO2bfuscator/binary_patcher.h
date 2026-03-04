@@ -25,7 +25,6 @@
 // ═══════════════════════════════════════════════════════════════
 class MethTypeObfuscator {
  public:
-  // Build from a ManglingMap — uses classNames mapping only
   explicit MethTypeObfuscator(
       const std::unordered_map<std::string, std::string>& classNamesMap);
 
@@ -48,9 +47,9 @@ class MethTypeObfuscator {
 //  PatchResult — statistics returned from a patch operation
 // ═══════════════════════════════════════════════════════════════
 struct PatchResult {
-  uint32_t selectorPatches = 0;  // number of selector strings patched
-  uint32_t classPatches = 0;     // number of class name strings patched
-  uint32_t methTypePatches = 0;  // number of methtype strings patched
+  uint32_t selectorPatches = 0;
+  uint32_t classPatches = 0;
+  uint32_t methTypePatches = 0;
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -66,58 +65,28 @@ struct PatchResult {
 //    2. __objc_methname  — patch selector strings
 //    3. __objc_classname — patch class name strings
 //
-//  Same-length invariant:
-//    Every replacement must be the same byte length as the original.
-//    If a mangled name is shorter, it is NUL-padded to fill the gap.
-//    If a mangled name is longer, it is silently skipped (should
-//    never happen if Phase 5 enforced the length constraint).
 // ═══════════════════════════════════════════════════════════════
 class BinaryPatcher {
  public:
   // ── Patch a single slice buffer in-place ──────────────────────
-  //
-  // Modifies the bytes pointed to by slice.data directly.
-  // The caller must ensure slice.data is writable (i.e. the
-  // buffer was allocated by us, not mmap'd read-only).
   static PatchResult patch(MachOSlice& slice, const ManglingMap& map);
 
   // ── Patch a binary file on disk ───────────────────────────────────
-  // Reads from srcPath, patches all slices, writes result to dstPath.
-  // srcPath and dstPath may be the same (in-place patch) but it is
-  // strongly recommended to use different paths so the original is
-  // preserved if anything goes wrong.
   static PatchResult patchFile(const std::string& srcPath,
                                const std::string& dstPath,
                                const ManglingMap& map);
 
  private:
   // ── Step 1: patch __objc_methtype ────────────────────────────
-  //
-  // Class names embedded in methtype strings are replaced using
-  // MethTypeObfuscator. Because methtype strings contain type
-  // encodings that may be longer or shorter than the class name
-  // alone, we use NUL-padding to fill any size difference.
   static uint32_t patchMethTypes(MachOSlice& slice, const ManglingMap& map);
 
   // ── Step 2: patch __objc_methname ────────────────────────────
-  //
-  // Each NUL-terminated selector string in __objc_methname is
-  // compared against the selectors map. If found, the bytes are
-  // overwritten in-place. The replacement is always the same
-  // length (enforced by Phase 5), so no padding is needed.
   static uint32_t patchSelectors(MachOSlice& slice, const ManglingMap& map);
 
   // ── Step 3: patch __objc_classname ───────────────────────────
-  //
-  // Class names are NUL-terminated strings in __objc_classname.
-  // We walk the section and replace each matching name in-place,
-  // NUL-padding if the new name is shorter.
   static uint32_t patchClassNames(MachOSlice& slice, const ManglingMap& map);
 
   // ── Helper: replace a NUL-terminated string at fileOffset ────
-  // Writes newValue over the bytes at fileOffset in slice.data,
-  // followed by a NUL terminator, padding any remaining bytes
-  // up to origLen with NUL bytes.
   static void replaceStringInPlace(MachOSlice& slice, uint64_t fileOffset,
                                    const std::string& newValue, size_t origLen);
 };

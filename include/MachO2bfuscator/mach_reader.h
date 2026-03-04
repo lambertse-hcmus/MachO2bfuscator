@@ -35,7 +35,7 @@ struct MachSegment {
 
 // ── Symtab ───────────────────────────────────────────────────────
 struct MachSymtab {
-  uint64_t symOff = 0;  // file offset to symbol table
+  uint64_t symOff = 0;  
   uint32_t nSyms = 0;   // number of symbol entries
   FileRange strTable;   // file range of the string table
 };
@@ -60,11 +60,7 @@ struct MachDyldInfo {
 };
 
 // ── A single Mach-O slice ────────────────────────────────────────
-// 'data' points into the memory-mapped file buffer.
-// 'dataSize' is the byte length of this slice.
-// The slice does NOT own the memory — the MachOImage owns it.
 struct MachOSlice {
-  // Raw bytes of this slice (non-owning pointer into the mmap buffer)
   BytePtr data = nullptr;
   uint64_t dataSize = 0;
 
@@ -111,7 +107,6 @@ struct MachOSlice {
 struct MachOImage {
   std::string path;
 
-  // Single-arch binaries have exactly one slice.
   // Fat binaries have one slice per architecture.
   std::vector<MachOSlice> slices;
 
@@ -132,10 +127,4 @@ struct MachOImage {
   MachOImage& operator=(MachOImage&&) noexcept;
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  Loader — entry point for Phase 1
-// ═══════════════════════════════════════════════════════════════
-
-// Load a Mach-O or fat binary from disk.
-// Throws MachLoadError on failure.
 MachOImage loadMachOImage(const std::string& path);
